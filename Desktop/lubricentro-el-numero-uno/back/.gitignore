@@ -3,5 +3,4 @@ node_modules/
 dist/
 build/
 *.exe
-Desktop/git add .
-git commit -m "feat: inicializar repositorio limpio sin binarios"
+Desktop
