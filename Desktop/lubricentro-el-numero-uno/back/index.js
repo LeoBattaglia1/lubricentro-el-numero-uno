@@ -12,6 +12,10 @@ import historialRoutes from "./src/routes/historialRoutes.js";
 import turnosRoutes from "./src/routes/turnosRoutes.js";
 import escasesRoutes from "./src/routes/escasesRoutes.js";
 import finanzasRoutes from "./src/routes/finanzasRoutes.js";
+import historialServiciosRouter from "./src/routes/historialServiciosRouter.js";
+import historialMercaderiaRouter from "./src/routes/historialMercaderiaRouter.js";
+import pagosRouter from "./src/routes/pagosRouter.js";
+import clienteAutoRouter from "./src/routes/clienteAutoRouter.js";
 
 dotenv.config();
 
@@ -31,6 +35,10 @@ app.use("/api/historial", historialRoutes);
 app.use("/api/turnos", turnosRoutes);
 app.use("/api/escases", escasesRoutes);
 app.use("/api/finanzas", finanzasRoutes);
+app.use("/api/historial-servicios", historialServiciosRouter);
+app.use("/api/historial-mercaderia", historialMercaderiaRouter);
+app.use("/api/pagos", pagosRouter);
+app.use("/api/cliente-auto", clienteAutoRouter);
 
 // Endpoint de verificación del estado del servidor
 app.get("/api/health", (req, res) => {

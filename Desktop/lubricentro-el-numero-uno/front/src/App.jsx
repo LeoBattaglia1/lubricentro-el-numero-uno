@@ -1,167 +1,84 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Dashboard from "./components/Dashboard";
+import Clientes from "./components/Clientes";
 import Mercaderia from "./components/Mercaderia";
+import Servicios from "./components/Servicios";
+import TrabajoRealizado from "./components/TrabajoRealizado";
+import Turnos from "./components/Turnos";
+import Presupuestos from "./components/Presupuestos";
+import Caja from "./components/Caja";
 
 function App() {
-  const [vistaActual, setVistaActual] = useState("inicio");
-  const [paramsVista, setParamsVista] = useState({});
-  const [fechaHora, setFechaHora] = useState(new Date());
+  const [vistaActual, setVistaActual] = useState("dashboard");
+  const [paramsNavegacion, setParamsNavegacion] = useState({});
 
-  useEffect(() => {
-    const timer = setInterval(() => setFechaHora(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const navegarA = (vista, params = {}) => {
+  const handleNavigate = (vista, params = {}) => {
     setVistaActual(vista);
-    setParamsVista(params);
+    setParamsNavegacion(params);
   };
 
-  const formatearFechaHora = (date) => {
-    return date.toLocaleString("es-AR", {
-      weekday: "short",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+  const handleVolver = () => {
+    setVistaActual("dashboard");
+    setParamsNavegacion({});
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f8fafc",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      {/* HEADER SUPERIOR */}
+    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      {/* HEADER DE LA APLICACIÓN */}
       <header
         style={{
-          background: "#0f172a",
+          backgroundColor: "#0f172a",
           color: "white",
-          padding: "10px 24px",
+          padding: "15px 20px",
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
         }}
       >
-        {/* LOGO Y MARCA (Izquierda) */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            cursor: "pointer",
-          }}
-          onClick={() => navegarA("inicio")}
+        <h1
+          onClick={handleVolver}
+          style={{ margin: 0, fontSize: "1.4rem", cursor: "pointer" }}
         >
-          <div
+          🛠️ Taller Mecánico / Lubricentro
+        </h1>
+        {vistaActual !== "dashboard" && (
+          <button
+            onClick={handleVolver}
             style={{
-              width: "38px",
-              height: "38px",
-              background: "#22c55e",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-              fontSize: "1.1rem",
+              padding: "6px 12px",
+              background: "#334155",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
             }}
           >
-            N1
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "bold" }}>
-              Lubricentro "El Número Uno"
-            </h1>
-            <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-              Sistema Integral de Gestión
-            </span>
-          </div>
-        </div>
-
-        {/* NAVEGACIÓN Y FECHA (Alineado a la extrema derecha) */}
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "15px",
-          }}
-        >
-          {vistaActual !== "inicio" && (
-            <button
-              onClick={() => navegarA("inicio")}
-              style={{
-                background: "#334155",
-                color: "white",
-                border: "none",
-                padding: "6px 14px",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "0.8rem",
-              }}
-            >
-              🏠 Volver al Inicio
-            </button>
-          )}
-
-          <div
-            style={{
-              fontSize: "0.8rem",
-              color: "#cbd5e1",
-              background: "#1e293b",
-              padding: "5px 12px",
-              borderRadius: "5px",
-              border: "1px solid #334155",
-              textTransform: "capitalize",
-            }}
-          >
-            📅 {formatearFechaHora(fechaHora)}
-          </div>
-        </div>
+            Inicio
+          </button>
+        )}
       </header>
 
-      {/* CONTENIDO DINÁMICO */}
-      <main style={{ padding: "10px 0" }}>
-        {vistaActual === "inicio" && <Dashboard onNavigate={navegarA} />}
-        {vistaActual === "mercaderia" && <Mercaderia />}
-        {vistaActual === "servicios" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            🛠️ Módulo de Servicios - Próximamente
-          </div>
+      {/* RENDERIZADO CONDICIONAL DE VISTAS */}
+      <main>
+        {vistaActual === "dashboard" && (
+          <Dashboard onNavigate={handleNavigate} />
         )}
         {vistaActual === "clientes" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            🚗 Módulo de Clientes{" "}
-            {paramsVista.busqueda && `(Buscando: ${paramsVista.busqueda})`} -
-            Próximamente
-          </div>
+          <Clientes
+            busquedaInicial={paramsNavegacion.busqueda}
+            onVolver={handleVolver}
+          />
         )}
+        {vistaActual === "mercaderia" && <Mercaderia onVolver={handleVolver} />}
+        {vistaActual === "servicios" && <Servicios onVolver={handleVolver} />}
         {vistaActual === "trabajo_realizado" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            📋 Módulo de Trabajo Realizado - Próximamente
-          </div>
+          <TrabajoRealizado onVolver={handleVolver} />
         )}
-        {vistaActual === "turnos" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            📅 Módulo de Turnos - Próximamente
-          </div>
-        )}
+        {vistaActual === "turnos" && <Turnos onVolver={handleVolver} />}
         {vistaActual === "presupuestos" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            📄 Módulo de Presupuestos (Solo Productos) - Próximamente
-          </div>
+          <Presupuestos onVolver={handleVolver} />
         )}
-        {vistaActual === "caja" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            💳 Módulo de Caja - Próximamente
-          </div>
-        )}
+        {vistaActual === "caja" && <Caja onVolver={handleVolver} />}
       </main>
     </div>
   );
