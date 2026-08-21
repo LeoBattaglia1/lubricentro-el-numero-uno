@@ -6,6 +6,7 @@ import {
 } from "../controllers/escasesController.js";
 
 const router = Router();
+
 router.get("/", getEscasesStock);
 router.post("/", createEscasesStock);
 router.delete("/:id", deleteEscasesStock);

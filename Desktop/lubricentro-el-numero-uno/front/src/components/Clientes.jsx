@@ -142,6 +142,16 @@ const styles = {
     borderRadius: "6px",
     margin: "8px 0",
   },
+  toastSuccess: {
+    backgroundColor: "#dcfce7",
+    color: "#15803d",
+    border: "1px solid #86efac",
+    padding: "10px 14px",
+    borderRadius: "6px",
+    marginBottom: "16px",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+  },
 };
 
 // Petición reutilizable
@@ -169,6 +179,7 @@ export default function Clientes() {
   const [autos, setAutos] = useState([]);
   const [clienteAuto, setClienteAuto] = useState([]);
   const [busqueda, setBusqueda] = useState("");
+  const [mensajeNotificacion, setMensajeNotificacion] = useState("");
 
   // Estado Panel Derecho
   const [vistaPanel, setVistaPanel] = useState({ tipo: null, data: null });
@@ -205,7 +216,6 @@ export default function Clientes() {
   const [mostrarFormNuevoAuto, setMostrarFormNuevoAuto] = useState(false);
   const [autoAEliminar, setAutoAEliminar] = useState(null);
 
-  // EFECTO DE CARGA: Definimos la lógica internamente para evitar warnings de dependencias y hoisted errors
   useEffect(() => {
     async function cargar() {
       try {
@@ -220,7 +230,6 @@ export default function Clientes() {
     cargar();
   }, []);
 
-  // Función reutilizable para recargar datos cuando se envían formularios
   async function recargarDatos() {
     try {
       const { dataClientes, dataAutos, dataCA } = await fetchDatosServidor();
@@ -232,6 +241,13 @@ export default function Clientes() {
     }
   }
 
+  const mostrarExito = (mensaje) => {
+    setMensajeNotificacion(mensaje);
+    setTimeout(() => {
+      setMensajeNotificacion("");
+    }, 4000);
+  };
+
   // Helper: Autos asignados a un cliente
   const getAutosDeCliente = (clienteId) => {
     const relaciones = clienteAuto.filter((ca) => ca.cliente_id === clienteId);
@@ -239,12 +255,15 @@ export default function Clientes() {
     return autos.filter((a) => autosIds.includes(a.id));
   };
 
-  // Helper: Autos sin ningún cliente asignado
+  // Helper: Autos sin ningún cliente asignado (Huérfanos)
   const getAutosSinCliente = () => {
     const autosAsignadosIds = clienteAuto.map((ca) => ca.auto_id);
     return autos.filter((a) => !autosAsignadosIds.includes(a.id));
   };
 
+  const autosHuerfanos = getAutosSinCliente();
+
+  // Filtro para clientes
   const clientesFiltrados = clientes.filter((c) => {
     const query = busqueda.toLowerCase().trim();
     if (!query) return true;
@@ -258,6 +277,16 @@ export default function Clientes() {
     );
 
     return coincideCliente || coincideAuto;
+  });
+
+  // Filtro para autos huérfanos en la tabla principal
+  const autosHuerfanosFiltrados = autosHuerfanos.filter((a) => {
+    const query = busqueda.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      a.marca_modelo?.toLowerCase().includes(query) ||
+      a.patente?.toLowerCase().includes(query)
+    );
   });
 
   const handleSeleccionarCliente = async (cliente) => {
@@ -311,7 +340,6 @@ export default function Clientes() {
   const handleCrearAutoSolo = async (e) => {
     e.preventDefault();
     if (!formDataNuevoAuto.marca_modelo || !formDataNuevoAuto.patente) {
-      alert("Completá todos los campos del vehículo.");
       return;
     }
 
@@ -326,16 +354,16 @@ export default function Clientes() {
         setFormDataNuevoAuto({ marca_modelo: "", patente: "" });
         await recargarDatos();
         setVistaPanel({ tipo: null, data: null });
-        alert("Vehículo creado exitosamente sin cliente asignado.");
+        mostrarExito("✅ Vehículo registrado correctamente en el sistema.");
       } else {
-        alert("No se pudo registrar el vehículo.");
+        console.error("No se pudo registrar el vehículo.");
       }
     } catch (error) {
       console.error("Error al crear auto sin cliente:", error);
     }
   };
 
-  // --- CREAR NUEVO CLIENTE (CON OPCIONES DE AUTOS NUEVOS Y HUÉRFANOS) ---
+  // --- CREAR NUEVO CLIENTE ---
   const handleAbrirFormNuevoCliente = () => {
     setFormDataCliente({ nombre: "", telefono: "" });
     setAutosNuevosParaCliente([]);
@@ -361,22 +389,17 @@ export default function Clientes() {
   const handleCrearClienteCompleto = async (e) => {
     e.preventDefault();
     try {
-      // 1. Crear el cliente
       const resCliente = await fetch("http://localhost:3000/api/clientes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formDataCliente),
       });
 
-      if (!resCliente.ok) {
-        alert("Error al crear el cliente.");
-        return;
-      }
+      if (!resCliente.ok) return;
 
       const clienteCreado = await resCliente.json();
       const clienteId = clienteCreado.id || clienteCreado.insertId;
 
-      // 2. Crear y asociar los autos nuevos que se agregaron
       for (const auto of autosNuevosParaCliente) {
         if (auto.marca_modelo && auto.patente) {
           const resAuto = await fetch("http://localhost:3000/api/autos", {
@@ -398,7 +421,6 @@ export default function Clientes() {
         }
       }
 
-      // 3. Asociar los autos huérfanos previamente seleccionados
       for (const autoId of idsAutosHuerfanosSeleccionados) {
         await fetch("http://localhost:3000/api/cliente-auto", {
           method: "POST",
@@ -409,6 +431,7 @@ export default function Clientes() {
 
       await recargarDatos();
       setVistaPanel({ tipo: null, data: null });
+      mostrarExito("✅ Cliente y vehículos vinculados exitosamente.");
     } catch (error) {
       console.error("Error al registrar cliente con vehículos:", error);
     }
@@ -481,8 +504,7 @@ export default function Clientes() {
       if (resCliente.ok) {
         await recargarDatos();
         handleSeleccionarCliente(editClienteData);
-      } else {
-        alert("No se pudo actualizar completamente la información.");
+        mostrarExito("✅ Información de cliente actualizada.");
       }
     } catch (error) {
       console.error("Error al editar cliente y autos:", error);
@@ -490,10 +512,7 @@ export default function Clientes() {
   };
 
   const handleAgregarAutoACliente = async () => {
-    if (!nuevoAutoData.marca_modelo || !nuevoAutoData.patente) {
-      alert("Completá los datos del vehículo.");
-      return;
-    }
+    if (!nuevoAutoData.marca_modelo || !nuevoAutoData.patente) return;
 
     try {
       const resAuto = await fetch("http://localhost:3000/api/autos", {
@@ -522,8 +541,6 @@ export default function Clientes() {
         ]);
         setNuevoAutoData({ marca_modelo: "", patente: "" });
         setMostrarFormNuevoAuto(false);
-      } else {
-        alert("Error al registrar el nuevo vehículo.");
       }
     } catch (error) {
       console.error("Error al agregar auto:", error);
@@ -536,9 +553,7 @@ export default function Clientes() {
     try {
       const res = await fetch(
         `http://localhost:3000/api/autos/${autoAEliminar.id}`,
-        {
-          method: "DELETE",
-        },
+        { method: "DELETE" },
       );
 
       if (res.ok) {
@@ -546,8 +561,6 @@ export default function Clientes() {
           prev.filter((a) => a.id !== autoAEliminar.id),
         );
         await recargarDatos();
-      } else {
-        alert("No se pudo eliminar el vehículo.");
       }
     } catch (error) {
       console.error("Error al eliminar auto:", error);
@@ -556,11 +569,14 @@ export default function Clientes() {
     }
   };
 
-  const autosHuerfanos = getAutosSinCliente();
-
   return (
     <div style={styles.container}>
       <h1 style={styles.header}>Gestión de Clientes y Vehículos</h1>
+
+      {/* Cartel de notificación de éxito */}
+      {mensajeNotificacion && (
+        <div style={styles.toastSuccess}>{mensajeNotificacion}</div>
+      )}
 
       {/* Buscador y Botones Principales */}
       <div style={styles.searchBarContainer}>
@@ -601,12 +617,13 @@ export default function Clientes() {
               </tr>
             </thead>
             <tbody>
-              {clientesFiltrados.length > 0 ? (
+              {/* LISTA DE CLIENTES Y SUS AUTOS */}
+              {clientesFiltrados.length > 0 &&
                 clientesFiltrados.map((cliente) => {
                   const autosDelCliente = getAutosDeCliente(cliente.id);
 
                   return (
-                    <tr key={cliente.id}>
+                    <tr key={`cli-${cliente.id}`}>
                       <td style={styles.td}>
                         <span
                           style={styles.linkBtn}
@@ -634,14 +651,62 @@ export default function Clientes() {
                       </td>
                     </tr>
                   );
-                })
-              ) : (
-                <tr>
-                  <td style={{ ...styles.td, color: "#8c9bba" }}>
-                    No se encontraron registros coincidentes.
-                  </td>
-                </tr>
+                })}
+
+              {/* AUTOS HUÉRFANOS / SIN CLIENTE ASIGNADO */}
+              {autosHuerfanosFiltrados.length > 0 && (
+                <>
+                  <tr>
+                    <td
+                      style={{
+                        ...styles.td,
+                        backgroundColor: "#f8fafc",
+                        fontWeight: "bold",
+                        color: "#0369a1",
+                        fontSize: "0.85rem",
+                        paddingTop: "16px",
+                      }}
+                    >
+                      ⚠️ VEHÍCULOS SIN CLIENTE ASIGNADO
+                    </td>
+                  </tr>
+                  {autosHuerfanosFiltrados.map((auto) => (
+                    <tr key={`huerfano-${auto.id}`}>
+                      <td style={{ ...styles.td, backgroundColor: "#f0f9ff" }}>
+                        <span
+                          style={{
+                            ...styles.autoBadge,
+                            backgroundColor: "#bae6fd",
+                          }}
+                          onClick={() => handleSeleccionarAuto(auto)}
+                        >
+                          🚗 {auto.marca_modelo} ({auto.patente})
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "#0284c7",
+                            fontStyle: "italic",
+                            marginLeft: "8px",
+                          }}
+                        >
+                          (Sin dueño asignado)
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               )}
+
+              {/* SIN RESULTADOS */}
+              {clientesFiltrados.length === 0 &&
+                autosHuerfanosFiltrados.length === 0 && (
+                  <tr>
+                    <td style={{ ...styles.td, color: "#8c9bba" }}>
+                      No se encontraron registros coincidentes.
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>
@@ -768,7 +833,7 @@ export default function Clientes() {
             </div>
           )}
 
-          {/* VISTA: Registrar Nuevo Cliente (Con Opción de Autos Nuevos y Sin Cliente) */}
+          {/* VISTA: Registrar Nuevo Cliente */}
           {!loadingPanel && vistaPanel.tipo === "nuevo_cliente" && (
             <div>
               <h3 style={{ marginTop: 0 }}>Registrar Nuevo Cliente</h3>
@@ -925,7 +990,7 @@ export default function Clientes() {
             </div>
           )}
 
-          {/* VISTA: Editar Cliente y Autos (Incluye Vincular Huérfanos) */}
+          {/* VISTA: Editar Cliente y Autos */}
           {!loadingPanel && vistaPanel.tipo === "editar_cliente" && (
             <div>
               <h3 style={{ marginTop: 0 }}>Editar Cliente y Vehículos</h3>
@@ -976,56 +1041,6 @@ export default function Clientes() {
                     }
                   />
                 </div>
-
-                {/* SUGERENCIA: AUTOS SIN CLIENTE PARA VINCULAR AHORA */}
-                {autosHuerfanos.length > 0 && (
-                  <div style={styles.unassignedBox}>
-                    <strong
-                      style={{
-                        color: "#1e40af",
-                        display: "block",
-                        marginBottom: "6px",
-                      }}
-                    >
-                      🔗 Vincular autos existentes sin cliente:
-                    </strong>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                      }}
-                    >
-                      {autosHuerfanos.map((auto) => (
-                        <div
-                          key={auto.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span style={{ fontSize: "0.9rem" }}>
-                            {auto.marca_modelo} ({auto.patente})
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleVincularAutoHuerfanoAEdit(auto.id)
-                            }
-                            style={{
-                              ...styles.btnSuccess,
-                              padding: "4px 8px",
-                              fontSize: "0.8rem",
-                            }}
-                          >
-                            + Asignar a este cliente
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <h4 style={{ marginBottom: "10px", marginTop: "16px" }}>
                   🚗 Vehículos Asignados
@@ -1110,6 +1125,7 @@ export default function Clientes() {
                   </div>
                 )}
 
+                {/* BOTÓN O DESPLIEGUE PARA AGREGAR/VINCULAR AUTO */}
                 {!mostrarFormNuevoAuto ? (
                   <button
                     type="button"
@@ -1126,18 +1142,83 @@ export default function Clientes() {
                   <div
                     style={{
                       ...styles.autoCardEdit,
-                      backgroundColor: "#eef9f1",
-                      borderColor: "#c3e6cb",
+                      backgroundColor: "#f8fafc",
+                      borderColor: "#cbd5e1",
                       margin: "12px 0 20px 0",
+                      padding: "16px",
                     }}
                   >
-                    <h5 style={{ margin: "0 0 8px 0" }}>
-                      Nuevo Vehículo para el Cliente
+                    {/* OPCIÓN 1: VINCULAR AUTO HUÉRFANO SI EXISTE */}
+                    {autosHuerfanos.length > 0 && (
+                      <div
+                        style={{
+                          ...styles.unassignedBox,
+                          marginBottom: "16px",
+                        }}
+                      >
+                        <strong
+                          style={{
+                            color: "#1e40af",
+                            display: "block",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          🔗 Asignar un auto existente sin dueño:
+                        </strong>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }}
+                        >
+                          {autosHuerfanos.map((auto) => (
+                            <div
+                              key={auto.id}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                backgroundColor: "#fff",
+                                padding: "6px 10px",
+                                borderRadius: "4px",
+                                border: "1px solid #e2e8f0",
+                              }}
+                            >
+                              <span style={{ fontSize: "0.9rem" }}>
+                                🚗 {auto.marca_modelo} (
+                                <strong>{auto.patente}</strong>)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleVincularAutoHuerfanoAEdit(auto.id)
+                                }
+                                style={{
+                                  ...styles.btnSuccess,
+                                  padding: "4px 10px",
+                                  fontSize: "0.8rem",
+                                }}
+                              >
+                                + Vincular
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OPCIÓN 2: REGISTRAR UN AUTO NUEVO */}
+                    <h5 style={{ margin: "0 0 10px 0", color: "#334155" }}>
+                      {autosHuerfanos.length > 0
+                        ? "O crear y asignar un auto nuevo:"
+                        : "Cargar nuevo vehículo:"}
                     </h5>
+
                     <div style={{ display: "flex", gap: "8px" }}>
                       <input
                         type="text"
-                        placeholder="Marca y Modelo"
+                        placeholder="Marca y Modelo (Ej: Ford Focus)"
                         value={nuevoAutoData.marca_modelo}
                         onChange={(e) =>
                           setNuevoAutoData({
@@ -1149,7 +1230,7 @@ export default function Clientes() {
                       />
                       <input
                         type="text"
-                        placeholder="Patente"
+                        placeholder="Patente (Ej: AB123CD)"
                         value={nuevoAutoData.patente}
                         onChange={(e) =>
                           setNuevoAutoData({
@@ -1160,15 +1241,16 @@ export default function Clientes() {
                         style={{ ...styles.input, flex: "1" }}
                       />
                     </div>
+
                     <div
-                      style={{ display: "flex", gap: "8px", marginTop: "8px" }}
+                      style={{ display: "flex", gap: "8px", marginTop: "12px" }}
                     >
                       <button
                         type="button"
                         onClick={handleAgregarAutoACliente}
                         style={styles.btnSuccess}
                       >
-                        Confirmar y Asignar
+                        Guardar y Asignar Nuevo
                       </button>
                       <button
                         type="button"
