@@ -34,7 +34,7 @@ app.use("/api/autos", autosRoutes);
 app.use("/api/servicios", serviciosRoutes);
 app.use("/api/historial", historialRoutes);
 app.use("/api/turnos", turnosRoutes);
-app.use("/api/escases", escasesRoutes);
+app.use("/api/escasesdestock", escasesRoutes);
 app.use("/api/finanzas", finanzasRoutes);
 app.use("/api/historial-servicios", historialServiciosRouter);
 app.use("/api/historial-mercaderia", historialMercaderiaRouter);
