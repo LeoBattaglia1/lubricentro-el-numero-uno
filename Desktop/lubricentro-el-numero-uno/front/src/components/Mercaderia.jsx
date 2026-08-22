@@ -256,7 +256,7 @@ const styles = {
   },
 };
 
-// HELPER PARSE FECHA
+// HELPER PARSE FECHA (Corregido el catch sin variable no utilizada)[cite: 2]
 const formatearFecha = (fechaRaw) => {
   if (!fechaRaw) return "En Escasez";
   try {
@@ -267,12 +267,12 @@ const formatearFecha = (fechaRaw) => {
       month: "2-digit",
       year: "numeric",
     });
-  } catch (e) {
+  } catch {
     return String(fechaRaw);
   }
 };
 
-// PETICIÓN SEGURA A ESCASEZ (Prueba distintas rutas si responde 404)
+// PETICIÓN SEGURA A ESCASEZ (Prueba distintas rutas si responde 404)[cite: 2]
 const fetchEscasezBD = async () => {
   const rutas = [
     "http://localhost:3000/api/escasezstock",
@@ -287,7 +287,7 @@ const fetchEscasezBD = async () => {
         const data = await res.json();
         return { data, rutaValida: url };
       }
-    } catch (e) {
+    } catch {
       // Sigue intentando la otra ruta
     }
   }
@@ -1227,7 +1227,6 @@ export default function Mercaderia() {
             <tbody>
               {mercaderiaFiltradaYOrdenada.length > 0 ? (
                 mercaderiaFiltradaYOrdenada.map((item) => {
-                  // Coincidencia dinámica convirtiendo a String
                   const registroEscasez = escasezStock.find((esc) => {
                     const idEscasez =
                       esc.mercaderia_id || esc.id_mercaderia || esc.producto_id;
