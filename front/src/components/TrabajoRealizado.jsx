@@ -143,6 +143,21 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
   },
+  radioGroup: {
+    display: "flex",
+    gap: "20px",
+    alignItems: "center",
+    marginBottom: "16px",
+  },
+  radioLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "1rem",
+    fontWeight: "600",
+    color: "#334155",
+    cursor: "pointer",
+  },
 };
 
 const ENDPOINT_AUTOS = "http://localhost:3000/api/autos";
@@ -153,6 +168,8 @@ const ENDPOINT_TRABAJOS = "http://localhost:3000/api/trabajos-realizados";
 const ENDPOINT_CLIENTE_AUTO = "http://localhost:3000/api/cliente-auto";
 
 export default function TrabajosRealizados({ onVolver }) {
+  const [tipoOperacion, setTipoOperacion] = useState("vehiculo"); // "vehiculo" o "particular"
+
   const [autos, setAutos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [serviciosOriginales, setServiciosOriginales] = useState([]);
@@ -371,14 +388,17 @@ export default function TrabajosRealizados({ onVolver }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (autoId === "" || autoId === "nuevo") {
-      setModalAlerta({
-        visible: true,
-        texto: "Debe seleccionar un vehículo válido registrado.",
-        tipo: "error",
-      });
-      return;
+    if (tipoOperacion === "vehiculo") {
+      if (autoId === "" || autoId === "nuevo") {
+        setModalAlerta({
+          visible: true,
+          texto: "Debe seleccionar un vehículo válido registrado.",
+          tipo: "error",
+        });
+        return;
+      }
     }
+
     if (
       Object.keys(serviciosSeleccionados).length === 0 &&
       Object.keys(mercaderiaSeleccionada).length === 0
@@ -397,7 +417,20 @@ export default function TrabajosRealizados({ onVolver }) {
         ? Number(clienteSeleccionadoId)
         : null;
 
-    if (clienteIdFinal && !clienteAsociadoAlAuto) {
+    if (tipoPago === "pendiente" && !clienteIdFinal) {
+      setModalAlerta({
+        visible: true,
+        texto: "Debe seleccionar un cliente para registrar el pago pendiente.",
+        tipo: "error",
+      });
+      return;
+    }
+
+    if (
+      tipoOperacion === "vehiculo" &&
+      clienteIdFinal &&
+      !clienteAsociadoAlAuto
+    ) {
       try {
         await fetch(ENDPOINT_CLIENTE_AUTO, {
           method: "POST",
@@ -413,10 +446,12 @@ export default function TrabajosRealizados({ onVolver }) {
     }
 
     const payload = {
-      auto_id: Number(autoId),
+      auto_id: tipoOperacion === "vehiculo" ? Number(autoId) : null,
       cliente_id: clienteIdFinal,
-      kilometros_actuales: kmActual ? Number(kmActual) : null,
-      kilometros_proximo_cambio: kmProximo ? Number(kmProximo) : null,
+      kilometros_actuales:
+        tipoOperacion === "vehiculo" && kmActual ? Number(kmActual) : null,
+      kilometros_proximo_cambio:
+        tipoOperacion === "vehiculo" && kmProximo ? Number(kmProximo) : null,
       fecha: new Date().toISOString().slice(0, 10),
       servicios_ids: Object.values(serviciosSeleccionados).map((s) =>
         Number(s.id),
@@ -484,6 +519,7 @@ export default function TrabajosRealizados({ onVolver }) {
       setClienteSeleccionadoId("");
       setNuevoClienteNombre("");
       setNuevoClienteTelefono("");
+      setTipoOperacion("vehiculo");
 
       if (typeof onVolver === "function") {
         onVolver();
@@ -521,42 +557,126 @@ export default function TrabajosRealizados({ onVolver }) {
           <h3 style={{ margin: "0 0 16px 0", color: "#334155" }}>
             1. Vehículo
           </h3>
-          <div style={styles.gridTwoCols}>
-            <div>
-              <label
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#64748b",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Auto *
-              </label>
-              <select
-                value={autoId}
-                onChange={(e) => setAutoId(e.target.value)}
-                style={styles.select}
-                required
-              >
-                <option value="">-- Seleccionar vehículo --</option>
-                <option value="nuevo">➕ Agregar nuevo auto...</option>
-                {autos.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.marca_modelo} {a.patente ? `(${a.patente})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            {autoId === "nuevo" && (
+          <div style={styles.radioGroup}>
+            <label style={styles.radioLabel}>
+              <input
+                type="radio"
+                name="tipoOperacion"
+                value="vehiculo"
+                checked={tipoOperacion === "vehiculo"}
+                onChange={() => setTipoOperacion("vehiculo")}
+                style={{ width: "16px", height: "16px", cursor: "pointer" }}
+              />
+              Vehículo
+            </label>
+            <label style={styles.radioLabel}>
+              <input
+                type="radio"
+                name="tipoOperacion"
+                value="particular"
+                checked={tipoOperacion === "particular"}
+                onChange={() => setTipoOperacion("particular")}
+                style={{ width: "16px", height: "16px", cursor: "pointer" }}
+              />
+              Particular
+            </label>
+          </div>
+
+          {tipoOperacion === "vehiculo" ? (
+            <div style={styles.gridTwoCols}>
+              <div>
+                <label
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "#64748b",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Auto *
+                </label>
+                <select
+                  value={autoId}
+                  onChange={(e) => setAutoId(e.target.value)}
+                  style={styles.select}
+                  required
+                >
+                  <option value="">-- Seleccionar vehículo --</option>
+                  <option value="nuevo">➕ Agregar nuevo auto...</option>
+                  {autos.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.marca_modelo} {a.patente ? `(${a.patente})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {autoId === "nuevo" && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr auto",
+                    gap: "10px",
+                    gridColumn: "1 / -1",
+                    alignItems: "end",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "#64748b",
+                        display: "block",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Marca y Modelo *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Ford Focus"
+                      value={nuevoAutoMarcaModelo}
+                      onChange={(e) => setNuevoAutoMarcaModelo(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "#64748b",
+                        display: "block",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Patente
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: AB123CD"
+                      value={nuevoAutoPatente}
+                      onChange={(e) => setNuevoAutoPatente(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleAgregarAutoInmediato}
+                      style={styles.btnActionInline}
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr auto",
+                  gridTemplateColumns: "1fr 1fr",
                   gap: "10px",
-                  gridColumn: "1 / -1",
-                  alignItems: "end",
                 }}
               >
                 <div>
@@ -568,13 +688,13 @@ export default function TrabajosRealizados({ onVolver }) {
                       marginBottom: "4px",
                     }}
                   >
-                    Marca y Modelo *
+                    Km Actuales
                   </label>
                   <input
-                    type="text"
-                    placeholder="Ej: Ford Focus"
-                    value={nuevoAutoMarcaModelo}
-                    onChange={(e) => setNuevoAutoMarcaModelo(e.target.value)}
+                    type="number"
+                    placeholder="Ej: 50000"
+                    value={kmActual}
+                    onChange={(e) => setKmActual(e.target.value)}
                     style={styles.input}
                   />
                 </div>
@@ -587,75 +707,24 @@ export default function TrabajosRealizados({ onVolver }) {
                       marginBottom: "4px",
                     }}
                   >
-                    Patente
+                    Próximo Km
                   </label>
                   <input
-                    type="text"
-                    placeholder="Ej: AB123CD"
-                    value={nuevoAutoPatente}
-                    onChange={(e) => setNuevoAutoPatente(e.target.value)}
+                    type="number"
+                    placeholder="Ej: 60000"
+                    value={kmProximo}
+                    onChange={(e) => setKmProximo(e.target.value)}
                     style={styles.input}
                   />
                 </div>
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleAgregarAutoInmediato}
-                    style={styles.btnActionInline}
-                  >
-                    Agregar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "10px",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Km Actuales
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ej: 50000"
-                  value={kmActual}
-                  onChange={(e) => setKmActual(e.target.value)}
-                  style={styles.input}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#64748b",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Próximo Km
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ej: 60000"
-                  value={kmProximo}
-                  onChange={(e) => setKmProximo(e.target.value)}
-                  style={styles.input}
-                />
               </div>
             </div>
-          </div>
+          ) : (
+            <p style={{ color: "#64748b", fontSize: "0.95rem", margin: 0 }}>
+              Modo Particular seleccionado. No se asociará ningún vehículo a
+              este registro.
+            </p>
+          )}
         </div>
 
         <div style={styles.card}>
@@ -984,7 +1053,7 @@ export default function TrabajosRealizados({ onVolver }) {
               </select>
             </div>
 
-            {tipoPago === "pendiente" && (
+            {(tipoPago === "pendiente" || tipoOperacion === "particular") && (
               <div>
                 <label
                   style={{
@@ -994,9 +1063,9 @@ export default function TrabajosRealizados({ onVolver }) {
                     marginBottom: "4px",
                   }}
                 >
-                  Dueño *
+                  Dueño / Cliente *
                 </label>
-                {clienteAsociadoAlAuto ? (
+                {tipoOperacion === "vehiculo" && clienteAsociadoAlAuto ? (
                   <div
                     style={{
                       ...styles.input,
@@ -1028,7 +1097,10 @@ export default function TrabajosRealizados({ onVolver }) {
                         marginBottom:
                           clienteSeleccionadoId === "nuevo" ? "8px" : "0",
                       }}
-                      required
+                      required={
+                        tipoPago === "pendiente" ||
+                        tipoOperacion === "particular"
+                      }
                     >
                       <option value="">-- Seleccionar cliente --</option>
                       <option value="nuevo">➕ Agregar nuevo cliente...</option>

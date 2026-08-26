@@ -163,10 +163,18 @@ const formatearFecha = (fechaStr) => {
 };
 
 const fetchDatosServidor = async () => {
-  const [resClientes, resAutos, resClienteAuto] = await Promise.all([
+  const [
+    resClientes,
+    resAutos,
+    resClienteAuto,
+    resServicios,
+    resMercaderiaCatalogo,
+  ] = await Promise.all([
     fetch("http://localhost:3000/api/clientes"),
     fetch("http://localhost:3000/api/autos"),
     fetch("http://localhost:3000/api/cliente-auto"),
+    fetch("http://localhost:3000/api/servicios").catch(() => ({ ok: false })),
+    fetch("http://localhost:3000/api/mercaderia").catch(() => ({ ok: false })),
   ]);
 
   if (!resClientes.ok || !resAutos.ok) {
@@ -176,14 +184,21 @@ const fetchDatosServidor = async () => {
   const dataClientes = await resClientes.json();
   const dataAutos = await resAutos.json();
   const dataCA = resClienteAuto.ok ? await resClienteAuto.json() : [];
+  const dataServicios = resServicios.ok ? await resServicios.json() : [];
+  const dataMercaderia = resMercaderiaCatalogo.ok
+    ? await resMercaderiaCatalogo.json()
+    : [];
 
-  return { dataClientes, dataAutos, dataCA };
+  return { dataClientes, dataAutos, dataCA, dataServicios, dataMercaderia };
 };
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [autos, setAutos] = useState([]);
   const [clienteAuto, setClienteAuto] = useState([]);
+  const [serviciosCatalogo, setServiciosCatalogo] = useState([]);
+  const [mercaderiaCatalogo, setMercaderiaCatalogo] = useState([]);
+
   const [busqueda, setBusqueda] = useState("");
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
 
@@ -222,10 +237,18 @@ export default function Clientes() {
   useEffect(() => {
     async function cargar() {
       try {
-        const { dataClientes, dataAutos, dataCA } = await fetchDatosServidor();
+        const {
+          dataClientes,
+          dataAutos,
+          dataCA,
+          dataServicios,
+          dataMercaderia,
+        } = await fetchDatosServidor();
         setClientes(dataClientes);
         setAutos(dataAutos);
         setClienteAuto(dataCA);
+        setServiciosCatalogo(dataServicios);
+        setMercaderiaCatalogo(dataMercaderia);
       } catch (error) {
         console.error("Error al cargar los datos:", error);
       }
@@ -235,10 +258,13 @@ export default function Clientes() {
 
   async function recargarDatos() {
     try {
-      const { dataClientes, dataAutos, dataCA } = await fetchDatosServidor();
+      const { dataClientes, dataAutos, dataCA, dataServicios, dataMercaderia } =
+        await fetchDatosServidor();
       setClientes(dataClientes);
       setAutos(dataAutos);
       setClienteAuto(dataCA);
+      setServiciosCatalogo(dataServicios);
+      setMercaderiaCatalogo(dataMercaderia);
     } catch (error) {
       console.error("Error al cargar los datos:", error);
     }
@@ -293,86 +319,19 @@ export default function Clientes() {
     setVistaPanel({ tipo: "cliente", data: cliente });
 
     try {
-      const resPagos = await fetch(
-        `http://localhost:3000/api/pagos/cliente/${cliente.id}`,
+      const res = await fetch(
+        `http://localhost:3000/api/clientes/${cliente.id}/deuda-detalle`,
       );
-
-      if (resPagos.ok) {
-        const pagos = await resPagos.json();
-
-        const pendientes = pagos.filter(
-          (p) => p.tipo_pago === "pendiente" || p.tipo_pago === "Pendiente",
-        );
-
-        const pagosConDetalle = await Promise.all(
-          pendientes.map(async (pago) => {
-            let serviciosNombres = [];
-            let mercaderiaDetalle = [];
-            let precioTotalCalculado = Number(pago.monto) || 0;
-
-            if (pago.historial_servicio_id) {
-              try {
-                const resHistorial = await fetch(
-                  `http://localhost:3000/api/historial-servicios/${pago.historial_servicio_id}`,
-                );
-                if (resHistorial.ok) {
-                  const dataHistorial = await resHistorial.json();
-
-                  if (dataHistorial.servicio) {
-                    serviciosNombres.push(dataHistorial.servicio);
-                  }
-                  if (dataHistorial.precio_servicio) {
-                    precioTotalCalculado += Number(
-                      dataHistorial.precio_servicio,
-                    );
-                  }
-                }
-
-                const resMercaderia = await fetch(
-                  `http://localhost:3000/api/historial-mercaderia/historial/${pago.historial_servicio_id}`,
-                );
-                if (resMercaderia.ok) {
-                  const dataMercaderia = await resMercaderia.json();
-
-                  mercaderiaDetalle = dataMercaderia.map((m) => {
-                    const subtotal =
-                      Number(m.precio || 0) * Number(m.cantidad || 1);
-                    precioTotalCalculado += subtotal;
-                    return {
-                      nombre_producto: m.nombre_producto || m.nombre,
-                      cantidad: m.cantidad,
-                      precio: m.precio,
-                      subtotal: subtotal,
-                    };
-                  });
-                }
-              } catch (err) {
-                console.error("Error obteniendo detalles del historial:", err);
-              }
-            }
-
-            return {
-              ...pago,
-              serviciosNombres,
-              mercaderiaDetalle,
-              precioTotalCalculado,
-            };
-          }),
-        );
-
-        setPagosPendientesCliente(pagosConDetalle);
-
-        const deudaTotal = pagosConDetalle.reduce(
-          (acc, curr) => acc + curr.precioTotalCalculado,
-          0,
-        );
-        setDeudaCliente(deudaTotal);
+      if (res.ok) {
+        const data = await res.json();
+        setPagosPendientesCliente(data.pagosPendientes);
+        setDeudaCliente(data.deudaTotal);
       } else {
         setPagosPendientesCliente([]);
         setDeudaCliente(0);
       }
     } catch (error) {
-      console.error("Error al obtener deudas del cliente:", error);
+      console.error("Error al obtener la deuda del cliente:", error);
       setPagosPendientesCliente([]);
       setDeudaCliente(0);
     } finally {
@@ -388,14 +347,77 @@ export default function Clientes() {
       const resHistorial = await fetch(
         `http://localhost:3000/api/historial-servicios/auto/${auto.id}`,
       );
-      if (resHistorial.ok) {
-        const dataHistorial = await resHistorial.json();
-        setHistorialAuto(dataHistorial);
-      } else {
-        setHistorialAuto([]);
-      }
+      const resHistorialMercaderia = await fetch(
+        `http://localhost:3000/api/historial-mercaderia/auto/${auto.id}`,
+      ).catch(() => ({ ok: false }));
+
+      const dataHistorialServicios = resHistorial.ok
+        ? await resHistorial.json()
+        : [];
+      const dataHistorialMercaderia = resHistorialMercaderia.ok
+        ? await resHistorialMercaderia.json()
+        : [];
+
+      const combinadoMap = {};
+
+      dataHistorialServicios.forEach((s) => {
+        const fecha = formatearFecha(s.fecha);
+        if (!combinadoMap[fecha]) {
+          combinadoMap[fecha] = {
+            fecha,
+            servicios: [],
+            mercaderia: [],
+            kilometros_actuales: s.kilometros_actuales,
+            kilometros_proximo_cambio: s.kilometros_proximo_cambio,
+          };
+        }
+        const servicioCatalogo = serviciosCatalogo.find(
+          (cat) => cat.id === s.servicio_id,
+        );
+        const nombreServicio =
+          servicioCatalogo?.nombre ||
+          s.nombre_servicio ||
+          `Servicio #${s.servicio_id}`;
+        if (!combinadoMap[fecha].servicios.includes(nombreServicio)) {
+          combinadoMap[fecha].servicios.push(nombreServicio);
+        }
+      });
+
+      dataHistorialMercaderia.forEach((m) => {
+        const fecha = formatearFecha(m.fecha);
+        if (!combinadoMap[fecha]) {
+          combinadoMap[fecha] = {
+            fecha,
+            servicios: [],
+            mercaderia: [],
+            kilometros_actuales: m.kilometros_actuales || null,
+            kilometros_proximo_cambio: m.kilometros_proximo_cambio || null,
+          };
+        }
+        const productoCatalogo = mercaderiaCatalogo.find(
+          (cat) => cat.id === m.mercaderia_id,
+        );
+        const nombreProducto =
+          productoCatalogo?.nombre ||
+          m.nombre_producto ||
+          `Producto #${m.mercaderia_id}`;
+
+        const existente = combinadoMap[fecha].mercaderia.find(
+          (item) => item.nombre_producto === nombreProducto,
+        );
+        if (existente) {
+          existente.cantidad = Number(existente.cantidad) + Number(m.cantidad);
+        } else {
+          combinadoMap[fecha].mercaderia.push({
+            nombre_producto: nombreProducto,
+            cantidad: m.cantidad,
+          });
+        }
+      });
+
+      setHistorialAuto(Object.values(combinadoMap));
     } catch (error) {
-      console.error("Error al cargar historial:", error);
+      console.error("Error al cargar historial del auto:", error);
       setHistorialAuto([]);
     } finally {
       setLoadingPanel(false);
@@ -404,9 +426,7 @@ export default function Clientes() {
 
   const handleCrearAutoSolo = async (e) => {
     e.preventDefault();
-    if (!formDataNuevoAuto.marca_modelo || !formDataNuevoAuto.patente) {
-      return;
-    }
+    if (!formDataNuevoAuto.marca_modelo || !formDataNuevoAuto.patente) return;
 
     try {
       const res = await fetch("http://localhost:3000/api/autos", {
@@ -614,7 +634,9 @@ export default function Clientes() {
     try {
       const res = await fetch(
         `http://localhost:3000/api/autos/${autoAEliminar.id}`,
-        { method: "DELETE" },
+        {
+          method: "DELETE",
+        },
       );
 
       if (res.ok) {
@@ -804,7 +826,7 @@ export default function Clientes() {
                 {deudaCliente > 0 && pagosPendientesCliente.length > 0 && (
                   <div style={{ marginTop: "16px" }}>
                     <h4 style={{ margin: "0 0 8px 0", color: "#991b1b" }}>
-                      📋 Detalle de servicios y mercadería pendientes:
+                      📋 Detalle de pagos, servicios y mercadería pendientes:
                     </h4>
                     <div
                       style={{
@@ -843,6 +865,19 @@ export default function Clientes() {
                             </span>
                           </div>
 
+                          {pago.montoExtra > 0 && (
+                            <div
+                              style={{
+                                fontSize: "0.85rem",
+                                color: "#d97706",
+                                marginBottom: "6px",
+                              }}
+                            >
+                              ➕ Monto Extra Aplicado: $
+                              {pago.montoExtra.toLocaleString()}
+                            </div>
+                          )}
+
                           <div style={{ marginTop: "6px" }}>
                             <strong
                               style={{ fontSize: "0.85rem", color: "#4a5568" }}
@@ -868,7 +903,7 @@ export default function Clientes() {
                                   color: "#8c9bba",
                                 }}
                               >
-                                Sin servicio específico asociado
+                                Sin servicio específico asociado a esta fecha
                               </p>
                             )}
                           </div>
@@ -901,7 +936,7 @@ export default function Clientes() {
                                   color: "#8c9bba",
                                 }}
                               >
-                                Sin insumos registrados
+                                Sin insumos registrados para esta fecha
                               </p>
                             )}
                           </div>
@@ -1449,142 +1484,97 @@ export default function Clientes() {
               </h4>
 
               {historialAuto.length > 0 ? (
-                (() => {
-                  const historialAgrupado = historialAuto.reduce(
-                    (acc, curr) => {
-                      const fecha = formatearFecha(curr.fecha);
-                      if (!acc[fecha]) {
-                        acc[fecha] = {
-                          fecha,
-                          servicios: [],
-                          mercaderia: [],
-                          kilometros_actuales: curr.kilometros_actuales,
-                          kilometros_proximo_cambio:
-                            curr.kilometros_proximo_cambio,
-                        };
-                      }
-                      if (
-                        curr.servicio &&
-                        !acc[fecha].servicios.includes(curr.servicio)
-                      ) {
-                        acc[fecha].servicios.push(curr.servicio);
-                      }
-                      if (curr.mercaderia && Array.isArray(curr.mercaderia)) {
-                        curr.mercaderia.forEach((m) => {
-                          const existente = acc[fecha].mercaderia.find(
-                            (item) =>
-                              item.nombre_producto === m.nombre_producto,
-                          );
-                          if (existente) {
-                            existente.cantidad =
-                              Number(existente.cantidad) + Number(m.cantidad);
-                          } else {
-                            acc[fecha].mercaderia.push({ ...m });
-                          }
-                        });
-                      }
-                      return acc;
-                    },
-                    {},
-                  );
-
-                  const listaHistorialAgrupada =
-                    Object.values(historialAgrupado);
-
-                  return (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
+                  {historialAuto.map((item, idx) => (
                     <div
+                      key={idx}
                       style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "12px",
+                        padding: "14px",
+                        border: "1px solid #dee2e6",
+                        borderRadius: "6px",
+                        backgroundColor: "#ffffff",
                       }}
                     >
-                      {listaHistorialAgrupada.map((item, idx) => (
-                        <div
-                          key={idx}
+                      <p
+                        style={{
+                          margin: "0 0 4px 0",
+                          fontSize: "0.9rem",
+                          color: "#6c757d",
+                        }}
+                      >
+                        <strong>Fecha:</strong> {item.fecha}
+                      </p>
+                      <p
+                        style={{
+                          margin: "0 0 8px 0",
+                          fontSize: "1rem",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Servicios:{" "}
+                        {item.servicios.length > 0
+                          ? item.servicios.join(" • ")
+                          : "Sin servicios específicos"}
+                      </p>
+
+                      <div style={styles.kmBox}>
+                        <p style={{ margin: "0 0 4px 0" }}>
+                          <strong>Km Actuales:</strong>{" "}
+                          {item.kilometros_actuales
+                            ? `${item.kilometros_actuales} km`
+                            : "No especificado"}
+                        </p>
+                        <p
                           style={{
-                            padding: "14px",
-                            border: "1px solid #dee2e6",
-                            borderRadius: "6px",
-                            backgroundColor: "#ffffff",
+                            margin: 0,
+                            color: "#0056b3",
+                            fontWeight: "bold",
                           }}
                         >
-                          <p
-                            style={{
-                              margin: "0 0 4px 0",
-                              fontSize: "0.9rem",
-                              color: "#6c757d",
-                            }}
-                          >
-                            <strong>Fecha:</strong> {item.fecha}
-                          </p>
-                          <p
-                            style={{
-                              margin: "0 0 8px 0",
-                              fontSize: "1rem",
-                              fontWeight: "600",
-                            }}
-                          >
-                            Servicios:{" "}
-                            {item.servicios.length > 0
-                              ? item.servicios.join(" • ")
-                              : "Sin servicios específicos"}
-                          </p>
+                          🛠️ Próximo Cambio:{" "}
+                          {item.kilometros_proximo_cambio
+                            ? `${item.kilometros_proximo_cambio} km`
+                            : "No especificado"}
+                        </p>
+                      </div>
 
-                          <div style={styles.kmBox}>
-                            <p style={{ margin: "0 0 4px 0" }}>
-                              <strong>Km Actuales:</strong>{" "}
-                              {item.kilometros_actuales
-                                ? `${item.kilometros_actuales} km`
-                                : "No especificado"}
-                            </p>
-                            <p
-                              style={{
-                                margin: 0,
-                                color: "#0056b3",
-                                fontWeight: "bold",
-                              }}
-                            >
-                              🛠️ Próximo Cambio:{" "}
-                              {item.kilometros_proximo_cambio
-                                ? `${item.kilometros_proximo_cambio} km`
-                                : "No especificado"}
-                            </p>
-                          </div>
-
-                          <p
-                            style={{
-                              margin: "8px 0 4px 0",
-                              fontSize: "0.9rem",
-                              fontWeight: "500",
-                            }}
-                          >
-                            Mercadería / Insumos:
-                          </p>
-                          {item.mercaderia && item.mercaderia.length > 0 ? (
-                            <ul
-                              style={{
-                                margin: 0,
-                                paddingLeft: "20px",
-                                fontSize: "0.9rem",
-                              }}
-                            >
-                              {item.mercaderia.map((m, mIdx) => (
-                                <li key={mIdx}>{m.nombre_producto}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <em
-                              style={{ fontSize: "0.85rem", color: "#8c9bba" }}
-                            >
-                              Sin insumos registrados para esta fecha.
-                            </em>
-                          )}
-                        </div>
-                      ))}
+                      <p
+                        style={{
+                          margin: "8px 0 4px 0",
+                          fontSize: "0.9rem",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Mercadería / Insumos:
+                      </p>
+                      {item.mercaderia && item.mercaderia.length > 0 ? (
+                        <ul
+                          style={{
+                            margin: 0,
+                            paddingLeft: "20px",
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {item.mercaderia.map((m, mIdx) => (
+                            <li key={mIdx}>
+                              {m.nombre_producto} (Cant: {m.cantidad})
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <em style={{ fontSize: "0.85rem", color: "#8c9bba" }}>
+                          Sin insumos registrados para esta fecha.
+                        </em>
+                      )}
                     </div>
-                  );
-                })()
+                  ))}
+                </div>
               ) : (
                 <p style={{ color: "#6c757d" }}>
                   No hay registros de servicio guardados para este vehículo.

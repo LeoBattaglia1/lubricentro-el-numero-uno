@@ -13,7 +13,28 @@ export const getHistorialByAuto = async (req, res) => {
     );
     res.json(rows);
   } catch (error) {
-    console.error("Error al obtener historial de servicios:", error);
+    console.error("Error al obtener historial de servicios por auto:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};
+
+// Obtener historial de servicios por cliente
+export const getHistorialByCliente = async (req, res) => {
+  const { cliente_id } = req.params;
+  try {
+    const [rows] = await pool.query(
+      `SELECT hs.*, s.nombre as servicio_nombre 
+       FROM historial_servicios hs
+       LEFT JOIN servicios s ON hs.servicio_id = s.id
+       WHERE hs.cliente_id = ? ORDER BY hs.fecha DESC`,
+      [cliente_id],
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(
+      "Error al obtener historial de servicios por cliente:",
+      error,
+    );
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
@@ -22,6 +43,7 @@ export const getHistorialByAuto = async (req, res) => {
 export const registrarServicio = async (req, res) => {
   const {
     auto_id,
+    cliente_id,
     servicio_id,
     kilometros_actuales,
     kilometros_proximo_cambio,
@@ -30,10 +52,11 @@ export const registrarServicio = async (req, res) => {
 
   try {
     const [result] = await pool.query(
-      `INSERT INTO historial_servicios (auto_id, servicio_id, kilometros_actuales, kilometros_proximo_cambio, fecha) 
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO historial_servicios (auto_id, cliente_id, servicio_id, kilometros_actuales, kilometros_proximo_cambio, fecha) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        auto_id,
+        auto_id || null,
+        cliente_id || null,
         servicio_id,
         kilometros_actuales || null,
         kilometros_proximo_cambio || null,
@@ -53,7 +76,6 @@ export const registrarServicio = async (req, res) => {
 /**
  * FUNCIÓN PURA PARA LA TRANSACCIÓN:
  * Se encarga EXCLUSIVAMENTE de insertar en la tabla historial_servicios.
- * Recibe la conexión activa, el auto ya resuelto, y los datos del servicio.
  */
 export const registrarServicioTransaccion = async (
   connection,
@@ -61,18 +83,25 @@ export const registrarServicioTransaccion = async (
   servicio_id,
   kilometros_actuales = null,
   kilometros_proximo_cambio = null,
+  cliente_id = null,
 ) => {
-  if (!auto_id || !servicio_id) {
+  if (!auto_id && !cliente_id) {
     throw new Error(
-      "Faltan datos obligatorios (auto_id o servicio_id) para el historial de servicios.",
+      "Se requiere al menos un auto_id o un cliente_id para el historial de servicios.",
+    );
+  }
+  if (!servicio_id) {
+    throw new Error(
+      "Falta el dato obligatorio (servicio_id) para el historial de servicios.",
     );
   }
 
   const [result] = await connection.query(
-    `INSERT INTO historial_servicios (auto_id, servicio_id, kilometros_actuales, kilometros_proximo_cambio, fecha) 
-     VALUES (?, ?, ?, ?, NOW())`,
+    `INSERT INTO historial_servicios (auto_id, cliente_id, servicio_id, kilometros_actuales, kilometros_proximo_cambio, fecha) 
+     VALUES (?, ?, ?, ?, ?, NOW())`,
     [
-      auto_id,
+      auto_id || null,
+      cliente_id || null,
       servicio_id,
       kilometros_actuales !== undefined ? kilometros_actuales : null,
       kilometros_proximo_cambio !== undefined
