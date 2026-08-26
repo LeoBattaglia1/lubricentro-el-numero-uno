@@ -128,13 +128,14 @@ const styles = {
     borderRadius: "6px",
     cursor: "pointer",
   },
-  btnSuccess: {
+  btnEscasez: {
     padding: "8px 16px",
-    backgroundColor: "#16a34a",
+    backgroundColor: "#d97706",
     color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
+    fontWeight: "500",
   },
   btnDanger: {
     padding: "8px 16px",
@@ -191,38 +192,22 @@ const styles = {
     fontWeight: "500",
   },
 
-  // PANEL LATERAL ESCASEZ
-  drawerContainer: {
-    position: "fixed",
-    top: "100px",
+  // MENÚ DESPLEGABLE DE ESCASEZ (EN BOTÓN)
+  dropdownEscasezMenu: {
+    position: "absolute",
+    top: "100%",
     right: 0,
-    zIndex: 999,
-    display: "flex",
-    alignItems: "flex-start",
-    transition: "transform 0.3s ease-in-out",
-  },
-  drawerTab: {
-    backgroundColor: "#d97706",
-    color: "#ffffff",
-    padding: "12px 8px",
-    writingMode: "vertical-rl",
-    textTransform: "uppercase",
-    fontWeight: "bold",
-    letterSpacing: "1px",
-    borderRadius: "8px 0 0 8px",
-    cursor: "pointer",
-    boxShadow: "-2px 2px 5px rgba(0,0,0,0.15)",
-    fontSize: "0.85rem",
-  },
-  drawerContent: {
+    marginTop: "6px",
     width: "340px",
-    maxHeight: "75vh",
+    maxHeight: "400px",
     overflowY: "auto",
     backgroundColor: "#ffffff",
-    borderLeft: "2px solid #d97706",
-    boxShadow: "-4px 0 12px rgba(0,0,0,0.15)",
+    boxShadow:
+      "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    borderRadius: "8px",
+    border: "2px solid #d97706",
     padding: "16px",
-    borderRadius: "0 0 0 8px",
+    zIndex: 100,
   },
   itemFilaEscasez: {
     padding: "10px",
@@ -256,7 +241,7 @@ const styles = {
   },
 };
 
-// HELPER PARSE FECHA (Corregido el catch sin variable no utilizada)[cite: 2]
+// HELPER PARSE FECHA
 const formatearFecha = (fechaRaw) => {
   if (!fechaRaw) return "En Escasez";
   try {
@@ -272,7 +257,7 @@ const formatearFecha = (fechaRaw) => {
   }
 };
 
-// PETICIÓN SEGURA A ESCASEZ (Prueba distintas rutas si responde 404)[cite: 2]
+// PETICIÓN SEGURA A ESCASEZ
 const fetchEscasezBD = async () => {
   const rutas = [
     "http://localhost:3000/api/escasezstock",
@@ -288,29 +273,25 @@ const fetchEscasezBD = async () => {
         return { data, rutaValida: url };
       }
     } catch {
-      // Sigue intentando la otra ruta
+      // Sigue intentando
     }
   }
   return { data: [], rutaValida: rutas[0] };
 };
 
 const fetchDatosServidor = async () => {
-  const [resMercaderia, resProveedores, resPagos] = await Promise.all([
+  const [resMercaderia, resProveedores] = await Promise.all([
     fetch("http://localhost:3000/api/mercaderia"),
     fetch("http://localhost:3000/api/provedores"),
-    fetch("http://localhost:3000/api/pagosprovedor"),
   ]);
 
   const dataMercaderia = resMercaderia.ok ? await resMercaderia.json() : [];
   const dataProveedores = resProveedores.ok ? await resProveedores.json() : [];
-  const dataPagos = resPagos.ok ? await resPagos.json() : [];
-
   const { data: dataEscasez, rutaValida } = await fetchEscasezBD();
 
   return {
     dataMercaderia,
     dataProveedores,
-    dataPagos,
     dataEscasez,
     rutaValida,
   };
@@ -319,7 +300,6 @@ const fetchDatosServidor = async () => {
 export default function Mercaderia() {
   const [mercaderia, setMercaderia] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [pagosProveedor, setPagosProveedor] = useState([]);
   const [escasezStock, setEscasezStock] = useState([]);
   const [endpointEscasez, setEndpointEscasez] = useState(
     "http://localhost:3000/api/escasezstock",
@@ -328,8 +308,8 @@ export default function Mercaderia() {
   // Estados UI
   const [menuProveedorOpen, setMenuProveedorOpen] = useState(false);
   const [menuMercaderiaOpen, setMenuMercaderiaOpen] = useState(false);
+  const [menuEscasezOpen, setMenuEscasezOpen] = useState(false);
   const [hoveredDropdownItem, setHoveredDropdownItem] = useState(null);
-  const [drawerEscasezOpen, setDrawerEscasezOpen] = useState(false);
 
   // Observaciones temporales
   const [observacionesLocal, setObservacionesLocal] = useState({});
@@ -339,10 +319,6 @@ export default function Mercaderia() {
   const [busqueda, setBusqueda] = useState("");
   const [ordenCampo, setOrdenCampo] = useState("nombre");
   const [ordenAsc, setOrdenAsc] = useState(true);
-
-  // Ordenamiento (Pagos)
-  const [ordenCampoPagos, setOrdenCampoPagos] = useState("fecha");
-  const [ordenAscPagos, setOrdenAscPagos] = useState(false);
 
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
   const [vistaPanel, setVistaPanel] = useState({ tipo: null, data: null });
@@ -384,26 +360,17 @@ export default function Mercaderia() {
   const [textoBusquedaEliminar, setTextoBusquedaEliminar] = useState("");
   const [mercaderiaAEliminarId, setMercaderiaAEliminarId] = useState("");
 
-  // Formulario Pago
-  const [formPago, setFormPago] = useState({ provedor_id: "", monto: "" });
-
   useEffect(() => {
     let isMounted = true;
 
     const cargarDatos = async () => {
       try {
-        const {
-          dataMercaderia,
-          dataProveedores,
-          dataPagos,
-          dataEscasez,
-          rutaValida,
-        } = await fetchDatosServidor();
+        const { dataMercaderia, dataProveedores, dataEscasez, rutaValida } =
+          await fetchDatosServidor();
 
         if (isMounted) {
           setMercaderia(dataMercaderia);
           setProveedores(dataProveedores);
-          setPagosProveedor(dataPagos);
           setEscasezStock(dataEscasez);
           setEndpointEscasez(rutaValida);
         }
@@ -429,16 +396,10 @@ export default function Mercaderia() {
 
   const refrescarTodo = async () => {
     try {
-      const {
-        dataMercaderia,
-        dataProveedores,
-        dataPagos,
-        dataEscasez,
-        rutaValida,
-      } = await fetchDatosServidor();
+      const { dataMercaderia, dataProveedores, dataEscasez, rutaValida } =
+        await fetchDatosServidor();
       setMercaderia(dataMercaderia);
       setProveedores(dataProveedores);
-      setPagosProveedor(dataPagos);
       setEscasezStock(dataEscasez);
       setEndpointEscasez(rutaValida);
     } catch (error) {
@@ -481,7 +442,6 @@ export default function Mercaderia() {
         body: JSON.stringify(payload),
       });
 
-      // Si falla la ruta guardada, intentamos con las rutas alternativas
       if (!res.ok) {
         const rutasAlternativas = [
           "http://localhost:3000/api/escasezstock",
@@ -506,7 +466,6 @@ export default function Mercaderia() {
         await refrescarTodo();
         mostrarExito("⚠️ Producto registrado en Escasez de Stock.");
       } else {
-        console.error("Error al registrar escasez:", res.statusText);
         mostrarAlerta(
           "No se pudo guardar la escasez. Verifica que la ruta de la API exista.",
         );
@@ -596,32 +555,6 @@ export default function Mercaderia() {
       if (valA > valB) return ordenAsc ? 1 : -1;
       return 0;
     });
-
-  const handleCambiarOrdenPagos = (campo) => {
-    if (ordenCampoPagos === campo) {
-      setOrdenAscPagos(!ordenAscPagos);
-    } else {
-      setOrdenCampoPagos(campo);
-      setOrdenAscPagos(true);
-    }
-  };
-
-  const pagosOrdenados = [...pagosProveedor].sort((a, b) => {
-    let valA = "";
-    let valB = "";
-
-    if (ordenCampoPagos === "fecha") {
-      valA = a.fecha ? new Date(a.fecha).getTime() : 0;
-      valB = b.fecha ? new Date(b.fecha).getTime() : 0;
-    } else if (ordenCampoPagos === "proveedor") {
-      valA = getNombreProveedor(a.provedor_id).toLowerCase();
-      valB = getNombreProveedor(b.provedor_id).toLowerCase();
-    }
-
-    if (valA < valB) return ordenAscPagos ? -1 : 1;
-    if (valA > valB) return ordenAscPagos ? 1 : -1;
-    return 0;
-  });
 
   // PROVEEDORES
   const handleCrearProveedor = async (e) => {
@@ -833,44 +766,6 @@ export default function Mercaderia() {
     });
   };
 
-  // PAGOS
-  const handleCrearPagoProveedor = async (e) => {
-    e.preventDefault();
-    if (!formPago.provedor_id || !formPago.monto) return;
-
-    const fechaActual = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-    try {
-      const res = await fetch("http://localhost:3000/api/pagosprovedor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provedor_id: Number(formPago.provedor_id),
-          monto: Number(formPago.monto),
-          fecha: fechaActual,
-        }),
-      });
-
-      if (res.ok) {
-        setFormPago({ provedor_id: "", monto: "" });
-        await refrescarTodo();
-        mostrarExito("✅ Pago registrado correctamente.");
-      } else {
-        const errorData = await res.json();
-        mostrarAlerta(
-          `Error: ${
-            errorData.error ||
-            errorData.message ||
-            "No se pudo registrar el pago"
-          }`,
-        );
-      }
-    } catch (error) {
-      console.error("Error al registrar pago:", error);
-      mostrarAlerta("Error de conexión con el servidor backend.");
-    }
-  };
-
   const getStyleDropdownItem = (id) => {
     const isHovered = hoveredDropdownItem === id;
     return {
@@ -882,152 +777,6 @@ export default function Mercaderia() {
 
   return (
     <div style={styles.container}>
-      {/* PANEL LATERAL ESCASEZ */}
-      <div
-        style={{
-          ...styles.drawerContainer,
-          transform: drawerEscasezOpen ? "translateX(0)" : "translateX(340px)",
-        }}
-        onMouseEnter={() => setDrawerEscasezOpen(true)}
-        onMouseLeave={() => setDrawerEscasezOpen(false)}
-      >
-        <div style={styles.drawerTab}>⚠️ Escasez de Stock</div>
-        <div style={styles.drawerContent}>
-          <h4 style={{ marginTop: 0, color: "#b45309", marginBottom: "12px" }}>
-            Productos en Escasez
-          </h4>
-
-          {escasezStock.length > 0 ? (
-            escasezStock.map((esc) => {
-              const escId = esc.escasez_id || esc.id_escasez || esc.id;
-              const idMercaderiaEsc =
-                esc.mercaderia_id || esc.id_mercaderia || esc.producto_id;
-
-              const productoAsociado = mercaderia.find(
-                (m) => String(m.id) === String(idMercaderiaEsc),
-              );
-
-              const nombreMostrar =
-                esc.producto ||
-                esc.nombre ||
-                productoAsociado?.nombre ||
-                `Producto #${idMercaderiaEsc}`;
-
-              const valorSelect =
-                observacionesLocal[escId] !== undefined
-                  ? observacionesLocal[escId]
-                  : esc.observacion || "";
-
-              const fechaTexto = formatearFecha(
-                esc.fecha_listado || esc.fecha || esc.created_at,
-              );
-
-              return (
-                <div key={escId} style={styles.itemFilaEscasez}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    <strong style={{ color: "#1e293b", fontSize: "0.95rem" }}>
-                      {nombreMostrar}
-                    </strong>
-                    <button
-                      title="Eliminar de la lista de escasez"
-                      onClick={() => handleEliminarEscasezDirecto(escId)}
-                      style={styles.btnDangerSmall}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#64748b",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Fecha: {fechaTexto}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <select
-                        value={valorSelect}
-                        onChange={(e) =>
-                          setObservacionesLocal({
-                            ...observacionesLocal,
-                            [escId]: e.target.value,
-                          })
-                        }
-                        style={{
-                          ...styles.select,
-                          fontSize: "0.85rem",
-                          padding: "4px 8px",
-                        }}
-                      >
-                        <option value="">-- Sin observación --</option>
-                        {observacionesExistentes.map((obs, idx) => (
-                          <option key={idx} value={obs}>
-                            {obs}
-                          </option>
-                        ))}
-                        <option value="NUEVA_OBSERVACION">
-                          ✍️ Escribir nueva observación...
-                        </option>
-                      </select>
-
-                      <button
-                        title="Guardar observación en BD"
-                        onClick={() =>
-                          handleGuardarObservacion(escId, esc.observacion)
-                        }
-                        style={styles.btnCheckSmall}
-                      >
-                        ✓
-                      </button>
-                    </div>
-
-                    {valorSelect === "NUEVA_OBSERVACION" && (
-                      <input
-                        type="text"
-                        placeholder="Escribí la observación..."
-                        value={observacionesManuales[escId] || ""}
-                        onChange={(e) =>
-                          setObservacionesManuales({
-                            ...observacionesManuales,
-                            [escId]: e.target.value,
-                          })
-                        }
-                        style={{
-                          ...styles.input,
-                          fontSize: "0.85rem",
-                          padding: "4px 8px",
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}>
-              No hay registros en la tabla de escasez.
-            </p>
-          )}
-        </div>
-      </div>
-
       <h1 style={styles.header}>Gestión de Mercadería y Proveedores</h1>
 
       {mensajeNotificacion && (
@@ -1185,14 +934,160 @@ export default function Mercaderia() {
             )}
           </div>
 
-          <button
-            onClick={() =>
-              setVistaPanel({ tipo: "pagos_proveedores", data: null })
-            }
-            style={styles.btnSuccess}
+          {/* BOTÓN DESPLEGABLE DE ESCASEZ */}
+          <div
+            style={styles.dropdownContainer}
+            onMouseEnter={() => setMenuEscasezOpen(true)}
+            onMouseLeave={() => setMenuEscasezOpen(false)}
           >
-            💳 Pagos a Proveedores
-          </button>
+            <button style={styles.btnEscasez}>Escasez de Stock ▾</button>
+            {menuEscasezOpen && (
+              <div style={styles.dropdownEscasezMenu}>
+                <h4
+                  style={{
+                    marginTop: 0,
+                    color: "#b45309",
+                    marginBottom: "12px",
+                  }}
+                >
+                  Productos en Escasez
+                </h4>
+
+                {escasezStock.length > 0 ? (
+                  escasezStock.map((esc) => {
+                    const escId = esc.escasez_id || esc.id_escasez || esc.id;
+                    const idMercaderiaEsc =
+                      esc.mercaderia_id || esc.id_mercaderia || esc.producto_id;
+
+                    const productoAsociado = mercaderia.find(
+                      (m) => String(m.id) === String(idMercaderiaEsc),
+                    );
+
+                    const nombreMostrar =
+                      esc.producto ||
+                      esc.nombre ||
+                      productoAsociado?.nombre ||
+                      `Producto #${idMercaderiaEsc}`;
+
+                    const valorSelect =
+                      observacionesLocal[escId] !== undefined
+                        ? observacionesLocal[escId]
+                        : esc.observacion || "";
+
+                    const fechaTexto = formatearFecha(
+                      esc.fecha_listado || esc.fecha || esc.created_at,
+                    );
+
+                    return (
+                      <div key={escId} style={styles.itemFilaEscasez}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          <strong
+                            style={{ color: "#1e293b", fontSize: "0.95rem" }}
+                          >
+                            {nombreMostrar}
+                          </strong>
+                          <button
+                            title="Eliminar de la lista de escasez"
+                            onClick={() => handleEliminarEscasezDirecto(escId)}
+                            style={styles.btnDangerSmall}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#64748b",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Fecha: {fechaTexto}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "6px",
+                          }}
+                        >
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <select
+                              value={valorSelect}
+                              onChange={(e) =>
+                                setObservacionesLocal({
+                                  ...observacionesLocal,
+                                  [escId]: e.target.value,
+                                })
+                              }
+                              style={{
+                                ...styles.select,
+                                fontSize: "0.85rem",
+                                padding: "4px 8px",
+                              }}
+                            >
+                              <option value="">-- Sin observación --</option>
+                              {observacionesExistentes.map((obs, idx) => (
+                                <option key={idx} value={obs}>
+                                  {obs}
+                                </option>
+                              ))}
+                              <option value="NUEVA_OBSERVACION">
+                                ✍️ Escribir nueva observación...
+                              </option>
+                            </select>
+
+                            <button
+                              title="Guardar observación en BD"
+                              onClick={() =>
+                                handleGuardarObservacion(escId, esc.observacion)
+                              }
+                              style={styles.btnCheckSmall}
+                            >
+                              ✓
+                            </button>
+                          </div>
+
+                          {valorSelect === "NUEVA_OBSERVACION" && (
+                            <input
+                              type="text"
+                              placeholder="Escribí la observación..."
+                              value={observacionesManuales[escId] || ""}
+                              onChange={(e) =>
+                                setObservacionesManuales({
+                                  ...observacionesManuales,
+                                  [escId]: e.target.value,
+                                })
+                              }
+                              style={{
+                                ...styles.input,
+                                fontSize: "0.85rem",
+                                padding: "4px 8px",
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p
+                    style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}
+                  >
+                    No hay registros en la tabla de escasez.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1345,7 +1240,7 @@ export default function Mercaderia() {
                       />
                     </div>
                     <div style={{ display: "flex", gap: "10px" }}>
-                      <button type="submit" style={styles.btnSuccess}>
+                      <button type="submit" style={styles.btnEscasez}>
                         Guardar Proveedor
                       </button>
                       <button
@@ -1705,131 +1600,6 @@ export default function Mercaderia() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* PAGOS A PROVEEDORES */}
-              {vistaPanel.tipo === "pagos_proveedores" && (
-                <div>
-                  <h3 style={{ marginTop: 0 }}>
-                    Gestión de Pagos a Proveedores
-                  </h3>
-
-                  <form
-                    onSubmit={handleCrearPagoProveedor}
-                    style={{
-                      backgroundColor: "#fff",
-                      padding: "12px",
-                      borderRadius: "6px",
-                      border: "1px solid #cbd5e1",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <h5 style={{ margin: "0 0 10px 0" }}>
-                      💳 Nuevo Pago a Proveedor
-                    </h5>
-                    <div style={{ marginBottom: "8px" }}>
-                      <select
-                        required
-                        style={styles.select}
-                        value={formPago.provedor_id}
-                        onChange={(e) =>
-                          setFormPago({
-                            ...formPago,
-                            provedor_id: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">-- Seleccionar Proveedor --</option>
-                        {proveedores.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ marginBottom: "10px" }}>
-                      <input
-                        type="number"
-                        required
-                        placeholder="Monto ($)"
-                        style={styles.input}
-                        value={formPago.monto}
-                        onChange={(e) =>
-                          setFormPago({ ...formPago, monto: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    <button type="submit" style={styles.btnSuccess}>
-                      Registrar Pago (Fecha Hoy)
-                    </button>
-                  </form>
-
-                  <h4>Historial de Pagos</h4>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th
-                          style={styles.th}
-                          onClick={() => handleCambiarOrdenPagos("fecha")}
-                        >
-                          Fecha{" "}
-                          {ordenCampoPagos === "fecha"
-                            ? ordenAscPagos
-                              ? "▲"
-                              : "▼"
-                            : "↕"}
-                        </th>
-                        <th
-                          style={styles.th}
-                          onClick={() => handleCambiarOrdenPagos("proveedor")}
-                        >
-                          Proveedor{" "}
-                          {ordenCampoPagos === "proveedor"
-                            ? ordenAscPagos
-                              ? "▲"
-                              : "▼"
-                            : "↕"}
-                        </th>
-                        <th style={{ ...styles.th, textAlign: "right" }}>
-                          Monto
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagosOrdenados.length > 0 ? (
-                        pagosOrdenados.map((pago) => (
-                          <tr key={pago.id}>
-                            <td style={styles.td}>{pago.fecha || "-"}</td>
-                            <td style={styles.td}>
-                              {getNombreProveedor(pago.provedor_id)}
-                            </td>
-                            <td style={{ ...styles.td, textAlign: "right" }}>
-                              ${Number(pago.monto || 0).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan="3"
-                            style={{ ...styles.td, color: "#64748b" }}
-                          >
-                            No hay pagos registrados.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-
-                  <button
-                    onClick={() => setVistaPanel({ tipo: null, data: null })}
-                    style={{ ...styles.btnSecondary, marginTop: "16px" }}
-                  >
-                    Cerrar Panel
-                  </button>
                 </div>
               )}
             </div>

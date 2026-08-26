@@ -19,6 +19,17 @@ export const obtenerTurnos = async (req, res) => {
   }
 };
 
+// NUEVO: Endpoint para proveer la relación entre clientes y autos al frontend
+export const obtenerClienteAuto = async (req, res) => {
+  try {
+    const query = `SELECT cliente_id, auto_id FROM cliente_auto`;
+    const [rows] = await db.query(query);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const crearTurno = async (req, res) => {
   try {
     const {

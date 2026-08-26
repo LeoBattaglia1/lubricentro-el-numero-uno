@@ -204,17 +204,89 @@ const styles = {
     cursor: "pointer",
     color: "#1e40af",
   },
+  dropdownSelectBox: {
+    position: "relative",
+    marginTop: "4px",
+  },
+  dropdownToggleBtn: {
+    width: "100%",
+    padding: "6px 8px",
+    borderRadius: "6px",
+    border: "1px solid #cbd5e1",
+    fontSize: "0.9rem",
+    backgroundColor: "#fff",
+    textAlign: "left",
+    cursor: "pointer",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    color: "#334155",
+  },
+  dropdownList: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+    zIndex: 10,
+    marginTop: "2px",
+    maxHeight: "150px",
+    overflowY: "auto",
+    padding: "4px",
+  },
+  servicioTagItem: {
+    padding: "6px 8px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+    borderRadius: "4px",
+    marginBottom: "2px",
+    userSelect: "none",
+    backgroundColor: "#f8fafc",
+    color: "#334155",
+    transition: "background-color 0.2s",
+  },
+  servicioTagItemActive: {
+    padding: "6px 8px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+    borderRadius: "4px",
+    marginBottom: "2px",
+    userSelect: "none",
+    backgroundColor: "#2563eb",
+    color: "#fff",
+    fontWeight: "500",
+  },
+  selectedTagsContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    marginTop: "4px",
+  },
+  miniPill: {
+    backgroundColor: "#eff6ff",
+    color: "#1e40af",
+    border: "1px solid #bfdbfe",
+    borderRadius: "4px",
+    padding: "2px 6px",
+    fontSize: "0.75rem",
+    fontWeight: "500",
+  },
 };
 
 const ENDPOINT_TURNOS = "http://localhost:3000/api/turnos";
 const ENDPOINT_CLIENTES = "http://localhost:3000/api/clientes";
 const ENDPOINT_AUTOS = "http://localhost:3000/api/autos";
+const ENDPOINT_CLIENTE_AUTO = "http://localhost:3000/api/cliente_auto";
 const ENDPOINT_SERVICIOS = "http://localhost:3000/api/servicios";
 
 export default function Turnos() {
   const [turnos, setTurnos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [autos, setAutos] = useState([]);
+  const [clienteAutoRelaciones, setClienteAutoRelaciones] = useState([]);
   const [servicios, setServicios] = useState([]);
 
   const [vista, setVista] = useState("tabla");
@@ -223,6 +295,12 @@ export default function Turnos() {
 
   const [fechaCalendario, setFechaCalendario] = useState(new Date());
 
+  // Desplegables de servicios abiertos/cerrados
+  const [menuServiciosNuevoAbierto, setMenuServiciosNuevoAbierto] =
+    useState(false);
+  const [menuServiciosEditAbierto, setMenuServiciosEditAbierto] =
+    useState(null);
+
   // Formulario de alta rápida
   const [nuevoFecha, setNuevoFecha] = useState("");
   const [nuevoHora, setNuevoHora] = useState("");
@@ -230,6 +308,7 @@ export default function Turnos() {
   const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
   const [nuevoAutoId, setNuevoAutoId] = useState("");
   const [nuevoVehiculoContacto, setNuevoVehiculoContacto] = useState("");
+  const [nuevoServiciosIds, setNuevoServiciosIds] = useState([]);
   const [nuevoObservaciones, setNuevoObservaciones] = useState("");
 
   // Edición
@@ -240,6 +319,7 @@ export default function Turnos() {
   const [editClienteNombre, setEditClienteNombre] = useState("");
   const [editAutoId, setEditAutoId] = useState("");
   const [editVehiculoContacto, setEditVehiculoContacto] = useState("");
+  const [editServiciosIds, setEditServiciosIds] = useState([]);
   const [editObservaciones, setEditObservaciones] = useState("");
 
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
@@ -247,16 +327,18 @@ export default function Turnos() {
 
   const cargarDatos = async () => {
     try {
-      const [resT, resC, resA, resS] = await Promise.all([
+      const [resT, resC, resA, resCA, resS] = await Promise.all([
         fetch(ENDPOINT_TURNOS),
         fetch(ENDPOINT_CLIENTES).catch(() => ({ ok: false })),
         fetch(ENDPOINT_AUTOS).catch(() => ({ ok: false })),
+        fetch(ENDPOINT_CLIENTE_AUTO).catch(() => ({ ok: false })),
         fetch(ENDPOINT_SERVICIOS).catch(() => ({ ok: false })),
       ]);
 
       if (resT.ok) setTurnos(await resT.json());
       if (resC.ok) setClientes(await resC.json());
       if (resA.ok) setAutos(await resA.json());
+      if (resCA.ok) setClienteAutoRelaciones(await resCA.json());
       if (resS.ok) setServicios(await resS.json());
     } catch (error) {
       console.error("Error al cargar datos de turnos:", error);
@@ -267,22 +349,25 @@ export default function Turnos() {
     let isMounted = true;
     const inicializar = async () => {
       try {
-        const [resT, resC, resA, resS] = await Promise.all([
+        const [resT, resC, resA, resCA, resS] = await Promise.all([
           fetch(ENDPOINT_TURNOS),
           fetch(ENDPOINT_CLIENTES).catch(() => ({ ok: false })),
           fetch(ENDPOINT_AUTOS).catch(() => ({ ok: false })),
+          fetch(ENDPOINT_CLIENTE_AUTO).catch(() => ({ ok: false })),
           fetch(ENDPOINT_SERVICIOS).catch(() => ({ ok: false })),
         ]);
 
         const turnosData = resT.ok ? await resT.json() : [];
         const clientesData = resC.ok ? await resC.json() : [];
         const autosData = resA.ok ? await resA.json() : [];
+        const clienteAutoData = resCA.ok ? await resCA.json() : [];
         const serviciosData = resS.ok ? await resS.json() : [];
 
         if (isMounted) {
           setTurnos(turnosData);
           setClientes(clientesData);
           setAutos(autosData);
+          setClienteAutoRelaciones(clienteAutoData);
           setServicios(serviciosData);
         }
       } catch (error) {
@@ -337,6 +422,7 @@ export default function Turnos() {
     return `${fecha}T00:00:00`;
   };
 
+  // Manejador al cambiar el Cliente en Alta
   const handleCambioClienteNuevo = (valor) => {
     setNuevoClienteId(valor);
     if (valor === "OTRO") {
@@ -350,7 +436,17 @@ export default function Turnos() {
       return;
     }
     const cId = Number(valor);
-    const autosDelCliente = autos.filter((a) => Number(a.cliente_id) === cId);
+    const idsAutosRelacionados = [
+      ...new Set(
+        clienteAutoRelaciones
+          .filter((ca) => Number(ca.cliente_id) === cId)
+          .map((ca) => Number(ca.auto_id)),
+      ),
+    ];
+
+    const autosDelCliente = autos.filter((a) =>
+      idsAutosRelacionados.includes(Number(a.id)),
+    );
     if (autosDelCliente.length === 1) {
       setNuevoAutoId(autosDelCliente[0].id.toString());
     } else {
@@ -358,6 +454,7 @@ export default function Turnos() {
     }
   };
 
+  // Manejador al cambiar el Auto en Alta (Bidireccional: auto -> cliente)
   const handleCambioAutoNuevo = (valor) => {
     setNuevoAutoId(valor);
     if (valor === "OTRO") {
@@ -366,12 +463,15 @@ export default function Turnos() {
     }
     if (!valor) return;
     const aId = Number(valor);
-    const autoEncontrado = autos.find((a) => Number(a.id) === aId);
-    if (autoEncontrado && autoEncontrado.cliente_id) {
-      setNuevoClienteId(autoEncontrado.cliente_id.toString());
+    const relacion = clienteAutoRelaciones.find(
+      (ca) => Number(ca.auto_id) === aId,
+    );
+    if (relacion && relacion.cliente_id) {
+      setNuevoClienteId(relacion.cliente_id.toString());
     }
   };
 
+  // Manejador al cambiar el Cliente en Edición
   const handleCambioClienteEdit = (valor) => {
     setEditClienteId(valor);
     if (valor === "OTRO") {
@@ -385,7 +485,17 @@ export default function Turnos() {
       return;
     }
     const cId = Number(valor);
-    const autosDelCliente = autos.filter((a) => Number(a.cliente_id) === cId);
+    const idsAutosRelacionados = [
+      ...new Set(
+        clienteAutoRelaciones
+          .filter((ca) => Number(ca.cliente_id) === cId)
+          .map((ca) => Number(ca.auto_id)),
+      ),
+    ];
+
+    const autosDelCliente = autos.filter((a) =>
+      idsAutosRelacionados.includes(Number(a.id)),
+    );
     if (autosDelCliente.length === 1) {
       setEditAutoId(autosDelCliente[0].id.toString());
     } else {
@@ -393,6 +503,7 @@ export default function Turnos() {
     }
   };
 
+  // Manejador al cambiar el Auto en Edición (Bidireccional: auto -> cliente)
   const handleCambioAutoEdit = (valor) => {
     setEditAutoId(valor);
     if (valor === "OTRO") {
@@ -401,24 +512,28 @@ export default function Turnos() {
     }
     if (!valor) return;
     const aId = Number(valor);
-    const autoEncontrado = autos.find((a) => Number(a.id) === aId);
-    if (autoEncontrado && autoEncontrado.cliente_id) {
-      setEditClienteId(autoEncontrado.cliente_id.toString());
+    const relacion = clienteAutoRelaciones.find(
+      (ca) => Number(ca.auto_id) === aId,
+    );
+    if (relacion && relacion.cliente_id) {
+      setEditClienteId(relacion.cliente_id.toString());
     }
   };
 
-  const validarPertenencia = (cId, aId) => {
-    if (!cId || !aId || cId === "OTRO" || aId === "OTRO") return true;
-    const autoObj = autos.find((a) => Number(a.id) === Number(aId));
-    if (
-      autoObj &&
-      autoObj.cliente_id &&
-      Number(autoObj.cliente_id) !== Number(cId)
-    ) {
-      mostrarError("El auto seleccionado no pertenece a este cliente.");
-      return false;
-    }
-    return true;
+  const toggleServicioNuevo = (nombreServicio) => {
+    setNuevoServiciosIds((prev) =>
+      prev.includes(nombreServicio)
+        ? prev.filter((s) => s !== nombreServicio)
+        : [...prev, nombreServicio],
+    );
+  };
+
+  const toggleServicioEdit = (nombreServicio) => {
+    setEditServiciosIds((prev) =>
+      prev.includes(nombreServicio)
+        ? prev.filter((s) => s !== nombreServicio)
+        : [...prev, nombreServicio],
+    );
   };
 
   const handleCrearTurno = async (e) => {
@@ -445,9 +560,11 @@ export default function Turnos() {
       return;
     }
 
-    if (!validarPertenencia(nuevoClienteId, nuevoAutoId)) return;
-
     const fechaHoraFinal = construirFechaHora(nuevoFecha, nuevoHora);
+    const observacionesFinal = [
+      ...nuevoServiciosIds,
+      ...(nuevoObservaciones ? [nuevoObservaciones] : []),
+    ].join(", ");
 
     try {
       const res = await fetch(ENDPOINT_TURNOS, {
@@ -459,7 +576,7 @@ export default function Turnos() {
           auto_id: autoIdFinal,
           cliente_nombre: clienteNombreFinal,
           vehiculo_contacto: vehiculoContactoFinal,
-          observaciones: nuevoObservaciones || null,
+          observaciones: observacionesFinal || null,
         }),
       });
 
@@ -470,6 +587,7 @@ export default function Turnos() {
         setNuevoClienteNombre("");
         setNuevoAutoId("");
         setNuevoVehiculoContacto("");
+        setNuevoServiciosIds([]);
         setNuevoObservaciones("");
         await cargarDatos();
         mostrarExito("Turno agregado correctamente.");
@@ -521,7 +639,14 @@ export default function Turnos() {
       setEditAutoId("OTRO");
       setEditVehiculoContacto(item.vehiculo_contacto || "");
     }
-    setEditObservaciones(item.observaciones || "");
+
+    const obsStr = item.observaciones || "";
+    const serviciosEncontrados = servicios
+      .map((s) => s.nombre)
+      .filter((nombreServicio) => obsStr.includes(nombreServicio));
+    setEditServiciosIds(serviciosEncontrados);
+    setEditObservaciones(obsStr);
+    setMenuServiciosEditAbierto(null);
   };
 
   const cancelarEdicion = () => setEditId(null);
@@ -542,9 +667,13 @@ export default function Turnos() {
     const vehiculoContactoFinal =
       editAutoId === "OTRO" ? editVehiculoContacto : null;
 
-    if (!validarPertenencia(editClienteId, editAutoId)) return;
-
     const fechaHoraFinal = construirFechaHora(editFecha, editHora);
+    const observacionesFinal = [
+      ...editServiciosIds,
+      ...(editObservaciones && !editServiciosIds.includes(editObservaciones)
+        ? [editObservaciones]
+        : []),
+    ].join(", ");
 
     try {
       const res = await fetch(`${ENDPOINT_TURNOS}/${id}`, {
@@ -556,7 +685,7 @@ export default function Turnos() {
           auto_id: autoIdFinal,
           cliente_nombre: clienteNombreFinal,
           vehiculo_contacto: vehiculoContactoFinal,
-          observaciones: editObservaciones || null,
+          observaciones: observacionesFinal || null,
         }),
       });
 
@@ -664,15 +793,37 @@ export default function Turnos() {
     return celdas;
   }, [fechaCalendario]);
 
+  // Autos disponibles en Alta (con deduplicación de IDs limpios)
   const autosDisponiblesAlta = useMemo(() => {
-    if (!nuevoClienteId || nuevoClienteId === "OTRO") return autos;
-    return autos.filter((a) => Number(a.cliente_id) === Number(nuevoClienteId));
-  }, [autos, nuevoClienteId]);
+    if (!nuevoClienteId || nuevoClienteId === "OTRO") {
+      return autos; // Si no hay cliente seleccionado, muestra todos o permite buscar libremente
+    }
+    const cId = Number(nuevoClienteId);
+    const idsValidos = [
+      ...new Set(
+        clienteAutoRelaciones
+          .filter((ca) => Number(ca.cliente_id) === cId)
+          .map((ca) => Number(ca.auto_id)),
+      ),
+    ];
+    return autos.filter((a) => idsValidos.includes(Number(a.id)));
+  }, [autos, clienteAutoRelaciones, nuevoClienteId]);
 
+  // Autos disponibles en Edición (con deduplicación de IDs limpios)
   const autosDisponiblesEdit = useMemo(() => {
-    if (!editClienteId || editClienteId === "OTRO") return autos;
-    return autos.filter((a) => Number(a.cliente_id) === Number(editClienteId));
-  }, [autos, editClienteId]);
+    if (!editClienteId || editClienteId === "OTRO") {
+      return autos;
+    }
+    const cId = Number(editClienteId);
+    const idsValidos = [
+      ...new Set(
+        clienteAutoRelaciones
+          .filter((ca) => Number(ca.cliente_id) === cId)
+          .map((ca) => Number(ca.auto_id)),
+      ),
+    ];
+    return autos.filter((a) => idsValidos.includes(Number(a.id)));
+  }, [autos, clienteAutoRelaciones, editClienteId]);
 
   const ahoraIso = new Date();
   const hoyIso = `${ahoraIso.getFullYear()}-${String(ahoraIso.getMonth() + 1).padStart(2, "0")}-${String(ahoraIso.getDate()).padStart(2, "0")}`;
@@ -807,7 +958,7 @@ export default function Turnos() {
                   {a.marca_modelo} {a.patente ? `(${a.patente})` : ""}
                 </option>
               ))}
-              <option value="OTRO">Otro (Vehículo libre)</option>
+              <option value="OTRO">Otro</option>
             </select>
             {nuevoAutoId === "OTRO" && (
               <input
@@ -821,20 +972,53 @@ export default function Turnos() {
           </div>
           <div>
             <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Servicio
+              Servicios
             </label>
-            <select
-              value={nuevoObservaciones}
-              onChange={(e) => setNuevoObservaciones(e.target.value)}
-              style={styles.selectSmall}
-            >
-              <option value="">-- Seleccionar servicio --</option>
-              {servicios.map((s) => (
-                <option key={s.id} value={s.nombre}>
-                  {s.nombre}
-                </option>
-              ))}
-            </select>
+            <div style={styles.dropdownSelectBox}>
+              <button
+                type="button"
+                style={styles.dropdownToggleBtn}
+                onClick={() =>
+                  setMenuServiciosNuevoAbierto(!menuServiciosNuevoAbierto)
+                }
+              >
+                <span>
+                  {nuevoServiciosIds.length > 0
+                    ? `${nuevoServiciosIds.length} servicio(s) seleccionado(s)`
+                    : "-- Seleccionar servicios --"}
+                </span>
+                <span>▼</span>
+              </button>
+              {menuServiciosNuevoAbierto && (
+                <div style={styles.dropdownList}>
+                  {servicios.map((s) => {
+                    const seleccionado = nuevoServiciosIds.includes(s.nombre);
+                    return (
+                      <div
+                        key={s.id}
+                        style={
+                          seleccionado
+                            ? styles.servicioTagItemActive
+                            : styles.servicioTagItem
+                        }
+                        onClick={() => toggleServicioNuevo(s.nombre)}
+                      >
+                        {s.nombre}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {nuevoServiciosIds.length > 0 && (
+              <div style={styles.selectedTagsContainer}>
+                {nuevoServiciosIds.map((srv, idx) => (
+                  <span key={idx} style={styles.miniPill}>
+                    {srv}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <button type="submit" style={styles.btnSuccess}>
@@ -983,20 +1167,60 @@ export default function Turnos() {
                       </td>
                       <td style={styles.td}>
                         {enEdicion ? (
-                          <select
-                            value={editObservaciones}
-                            onChange={(e) =>
-                              setEditObservaciones(e.target.value)
-                            }
-                            style={styles.selectSmall}
-                          >
-                            <option value="">-- Sin servicio --</option>
-                            {servicios.map((s) => (
-                              <option key={s.id} value={s.nombre}>
-                                {s.nombre}
-                              </option>
-                            ))}
-                          </select>
+                          <div>
+                            <div style={styles.dropdownSelectBox}>
+                              <button
+                                type="button"
+                                style={styles.dropdownToggleBtn}
+                                onClick={() =>
+                                  setMenuServiciosEditAbierto(
+                                    menuServiciosEditAbierto === item.id
+                                      ? null
+                                      : item.id,
+                                  )
+                                }
+                              >
+                                <span>
+                                  {editServiciosIds.length > 0
+                                    ? `${editServiciosIds.length} servicio(s) seleccionado(s)`
+                                    : "-- Seleccionar servicios --"}
+                                </span>
+                                <span>▼</span>
+                              </button>
+                              {menuServiciosEditAbierto === item.id && (
+                                <div style={styles.dropdownList}>
+                                  {servicios.map((s) => {
+                                    const seleccionado =
+                                      editServiciosIds.includes(s.nombre);
+                                    return (
+                                      <div
+                                        key={s.id}
+                                        style={
+                                          seleccionado
+                                            ? styles.servicioTagItemActive
+                                            : styles.servicioTagItem
+                                        }
+                                        onClick={() =>
+                                          toggleServicioEdit(s.nombre)
+                                        }
+                                      >
+                                        {s.nombre}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            {editServiciosIds.length > 0 && (
+                              <div style={styles.selectedTagsContainer}>
+                                {editServiciosIds.map((srv, idx) => (
+                                  <span key={idx} style={styles.miniPill}>
+                                    {srv}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span style={{ color: "#64748b" }}>
                             {item.observaciones || "Sin servicio"}

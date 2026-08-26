@@ -1,16 +1,19 @@
 import { Router } from "express";
 import {
   getPagos,
-  getPagosByCliente,
-  createPago,
-  deletePago,
+  getProveedores,
+  getPagosProveedor,
+  updatePago,
+  createPagoProveedor,
 } from "../controllers/pagosController.js";
 
 const router = Router();
 
+// Rutas de pagos y proveedores
 router.get("/", getPagos);
-router.get("/cliente/:cliente_id", getPagosByCliente);
-router.post("/", createPago);
-router.delete("/:id", deletePago);
+router.put("/:id", updatePago);
+router.get("/provedores", getProveedores);
+router.get("/pagosprovedor", getPagosProveedor);
+router.post("/pagosprovedor", createPagoProveedor);
 
 export default router;

@@ -5,13 +5,13 @@ import {
   updateCliente,
   deleteCliente,
   asociarAutoACliente,
-  getDeudaClienteDetalle, // 1. Importar la nueva función
+  getDeudaClienteDetalle,
 } from "../controllers/clientesController.js";
 
 const router = Router();
 
 router.get("/", getClientes);
-router.get("/:id/deuda-detalle", getDeudaClienteDetalle); // 2. Registrar la ruta para obtener deudas e historial
+router.get("/:id/deuda-detalle", getDeudaClienteDetalle); // Ruta correcta bajo /api/clientes/:id/deuda-detalle
 router.post("/", createCliente);
 router.post("/vincular-auto", asociarAutoACliente);
 router.put("/:id", updateCliente);
