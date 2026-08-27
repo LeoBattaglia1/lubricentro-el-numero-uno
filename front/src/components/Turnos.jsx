@@ -40,6 +40,23 @@ const styles = {
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
     marginBottom: "20px",
   },
+  formAlta: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr)) 140px",
+    gap: "12px",
+    alignItems: "end",
+  },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  label: {
+    fontSize: "0.75rem",
+    color: "#64748b",
+    marginBottom: "4px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
   table: {
     width: "100%",
     borderCollapse: "collapse",
@@ -49,7 +66,6 @@ const styles = {
     padding: "12px 10px",
     borderBottom: "2px solid #e2e8f0",
     color: "#4a5568",
-    cursor: "pointer",
     userSelect: "none",
   },
   td: {
@@ -57,68 +73,69 @@ const styles = {
     borderBottom: "1px solid #edf2f7",
     verticalAlign: "middle",
   },
-  inputSmall: {
-    padding: "6px 8px",
-    borderRadius: "6px",
-    border: "1px solid #cbd5e1",
-    fontSize: "0.9rem",
-    width: "100%",
-    boxSizing: "border-box",
-    marginTop: "4px",
-  },
-  selectSmall: {
-    padding: "6px 8px",
+  inputControl: {
+    height: "38px",
+    padding: "0 10px",
     borderRadius: "6px",
     border: "1px solid #cbd5e1",
     fontSize: "0.9rem",
     width: "100%",
     boxSizing: "border-box",
     backgroundColor: "#fff",
-    marginTop: "4px",
-  },
-  input: {
-    padding: "8px 12px",
-    borderRadius: "6px",
-    border: "1px solid #cbd5e1",
-    fontSize: "0.95rem",
-    width: "100%",
-    boxSizing: "border-box",
+    color: "#334155",
   },
   btnPrimary: {
-    padding: "8px 16px",
+    height: "38px",
+    padding: "0 16px",
     backgroundColor: "#2563eb",
     color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
     fontWeight: "500",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   btnSuccess: {
-    padding: "8px 16px",
+    height: "38px",
+    padding: "0 16px",
     backgroundColor: "#16a34a",
     color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
     fontWeight: "500",
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   btnSecondary: {
-    padding: "8px 12px",
+    height: "38px",
+    padding: "0 12px",
     backgroundColor: "#64748b",
     color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "0.85rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   btnDanger: {
-    padding: "8px 12px",
+    height: "38px",
+    padding: "0 12px",
     backgroundColor: "#dc2626",
     color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
     fontSize: "0.85rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   toastSuccess: {
     backgroundColor: "#dcfce7",
@@ -206,11 +223,11 @@ const styles = {
   },
   dropdownSelectBox: {
     position: "relative",
-    marginTop: "4px",
   },
   dropdownToggleBtn: {
     width: "100%",
-    padding: "6px 8px",
+    height: "38px",
+    padding: "0 10px",
     borderRadius: "6px",
     border: "1px solid #cbd5e1",
     fontSize: "0.9rem",
@@ -221,6 +238,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     color: "#334155",
+    whiteSpace: "nowrap",
   },
   dropdownList: {
     position: "absolute",
@@ -246,7 +264,6 @@ const styles = {
     userSelect: "none",
     backgroundColor: "#f8fafc",
     color: "#334155",
-    transition: "background-color 0.2s",
   },
   servicioTagItemActive: {
     padding: "6px 8px",
@@ -259,28 +276,28 @@ const styles = {
     color: "#fff",
     fontWeight: "500",
   },
-  selectedTagsContainer: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "4px",
-    marginTop: "4px",
-  },
-  miniPill: {
-    backgroundColor: "#eff6ff",
-    color: "#1e40af",
-    border: "1px solid #bfdbfe",
-    borderRadius: "4px",
-    padding: "2px 6px",
-    fontSize: "0.75rem",
-    fontWeight: "500",
-  },
 };
 
 const ENDPOINT_TURNOS = "http://localhost:3000/api/turnos";
 const ENDPOINT_CLIENTES = "http://localhost:3000/api/clientes";
 const ENDPOINT_AUTOS = "http://localhost:3000/api/autos";
-const ENDPOINT_CLIENTE_AUTO = "http://localhost:3000/api/cliente_auto";
+const ENDPOINT_CLIENTE_AUTO = "http://localhost:3000/api/turnos/cliente-auto";
 const ENDPOINT_SERVICIOS = "http://localhost:3000/api/servicios";
+
+const formatearFechaHora24hs = (fechaHoraStr) => {
+  if (!fechaHoraStr) return "Sin horario fijo";
+  const normalizado = fechaHoraStr.replace("T", " ");
+  const [fechaPart, horaPart] = normalizado.split(" ");
+  if (!fechaPart) return fechaHoraStr;
+
+  const [anio, mes, dia] = fechaPart.split("-");
+  const fechaFormateada = `${dia}/${mes}/${anio}`;
+
+  if (!horaPart) return fechaFormateada;
+  const horaMinutos = horaPart.slice(0, 5);
+
+  return `${fechaFormateada}, ${horaMinutos} hs`;
+};
 
 export default function Turnos() {
   const [turnos, setTurnos] = useState([]);
@@ -291,17 +308,15 @@ export default function Turnos() {
 
   const [vista, setVista] = useState("tabla");
   const [busqueda, setBusqueda] = useState("");
-  const [ordenAsc, setOrdenAsc] = useState(true);
 
   const [fechaCalendario, setFechaCalendario] = useState(new Date());
 
-  // Desplegables de servicios abiertos/cerrados
   const [menuServiciosNuevoAbierto, setMenuServiciosNuevoAbierto] =
     useState(false);
   const [menuServiciosEditAbierto, setMenuServiciosEditAbierto] =
     useState(null);
 
-  // Formulario de alta rápida
+  // Formulario de alta
   const [nuevoFecha, setNuevoFecha] = useState("");
   const [nuevoHora, setNuevoHora] = useState("");
   const [nuevoClienteId, setNuevoClienteId] = useState("");
@@ -325,29 +340,8 @@ export default function Turnos() {
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
   const [mensajeError, setMensajeError] = useState("");
 
-  const cargarDatos = async () => {
-    try {
-      const [resT, resC, resA, resCA, resS] = await Promise.all([
-        fetch(ENDPOINT_TURNOS),
-        fetch(ENDPOINT_CLIENTES).catch(() => ({ ok: false })),
-        fetch(ENDPOINT_AUTOS).catch(() => ({ ok: false })),
-        fetch(ENDPOINT_CLIENTE_AUTO).catch(() => ({ ok: false })),
-        fetch(ENDPOINT_SERVICIOS).catch(() => ({ ok: false })),
-      ]);
-
-      if (resT.ok) setTurnos(await resT.json());
-      if (resC.ok) setClientes(await resC.json());
-      if (resA.ok) setAutos(await resA.json());
-      if (resCA.ok) setClienteAutoRelaciones(await resCA.json());
-      if (resS.ok) setServicios(await resS.json());
-    } catch (error) {
-      console.error("Error al cargar datos de turnos:", error);
-    }
-  };
-
   useEffect(() => {
-    let isMounted = true;
-    const inicializar = async () => {
+    const cargarDatos = async () => {
       try {
         const [resT, resC, resA, resCA, resS] = await Promise.all([
           fetch(ENDPOINT_TURNOS),
@@ -357,31 +351,17 @@ export default function Turnos() {
           fetch(ENDPOINT_SERVICIOS).catch(() => ({ ok: false })),
         ]);
 
-        const turnosData = resT.ok ? await resT.json() : [];
-        const clientesData = resC.ok ? await resC.json() : [];
-        const autosData = resA.ok ? await resA.json() : [];
-        const clienteAutoData = resCA.ok ? await resCA.json() : [];
-        const serviciosData = resS.ok ? await resS.json() : [];
-
-        if (isMounted) {
-          setTurnos(turnosData);
-          setClientes(clientesData);
-          setAutos(autosData);
-          setClienteAutoRelaciones(clienteAutoData);
-          setServicios(serviciosData);
-        }
+        if (resT.ok) setTurnos(await resT.json());
+        if (resC.ok) setClientes(await resC.json());
+        if (resA.ok) setAutos(await resA.json());
+        if (resCA.ok) setClienteAutoRelaciones(await resCA.json());
+        if (resS.ok) setServicios(await resS.json());
       } catch (error) {
-        if (isMounted) {
-          console.error("Error al cargar datos de turnos:", error);
-        }
+        console.error("Error al cargar datos de turnos:", error);
       }
     };
 
-    inicializar();
-
-    return () => {
-      isMounted = false;
-    };
+    cargarDatos();
   }, []);
 
   const mostrarExito = (mensaje) => {
@@ -396,33 +376,14 @@ export default function Turnos() {
     setTimeout(() => setMensajeError(""), 5000);
   };
 
-  const validarFechaNoAnterior = (fechaStr) => {
-    if (!fechaStr) return true;
-
-    const ahora = new Date();
-    const anio = ahora.getFullYear();
-    const mes = String(ahora.getMonth() + 1).padStart(2, "0");
-    const dia = String(ahora.getDate()).padStart(2, "0");
-    const hoyStr = `${anio}-${mes}-${dia}`;
-
-    if (fechaStr < hoyStr) {
-      mostrarError(
-        "No se puede programar un turno en una fecha anterior a la de hoy.",
-      );
-      return false;
-    }
-    return true;
-  };
-
   const construirFechaHora = (fecha, hora) => {
     if (!fecha) return null;
     if (hora) {
-      return `${fecha}T${hora}:00`;
+      return `${fecha} ${hora}:00`;
     }
-    return `${fecha}T00:00:00`;
+    return `${fecha} 00:00:00`;
   };
 
-  // Manejador al cambiar el Cliente en Alta
   const handleCambioClienteNuevo = (valor) => {
     setNuevoClienteId(valor);
     if (valor === "OTRO") {
@@ -431,30 +392,10 @@ export default function Turnos() {
       setNuevoVehiculoContacto("");
       return;
     }
-    if (!valor) {
-      setNuevoAutoId("");
-      return;
-    }
-    const cId = Number(valor);
-    const idsAutosRelacionados = [
-      ...new Set(
-        clienteAutoRelaciones
-          .filter((ca) => Number(ca.cliente_id) === cId)
-          .map((ca) => Number(ca.auto_id)),
-      ),
-    ];
-
-    const autosDelCliente = autos.filter((a) =>
-      idsAutosRelacionados.includes(Number(a.id)),
-    );
-    if (autosDelCliente.length === 1) {
-      setNuevoAutoId(autosDelCliente[0].id.toString());
-    } else {
-      setNuevoAutoId("");
-    }
+    setNuevoAutoId("");
+    setNuevoVehiculoContacto("");
   };
 
-  // Manejador al cambiar el Auto en Alta (Bidireccional: auto -> cliente)
   const handleCambioAutoNuevo = (valor) => {
     setNuevoAutoId(valor);
     if (valor === "OTRO") {
@@ -462,16 +403,17 @@ export default function Turnos() {
       return;
     }
     if (!valor) return;
+
     const aId = Number(valor);
     const relacion = clienteAutoRelaciones.find(
       (ca) => Number(ca.auto_id) === aId,
     );
     if (relacion && relacion.cliente_id) {
       setNuevoClienteId(relacion.cliente_id.toString());
+      setNuevoClienteNombre("");
     }
   };
 
-  // Manejador al cambiar el Cliente en Edición
   const handleCambioClienteEdit = (valor) => {
     setEditClienteId(valor);
     if (valor === "OTRO") {
@@ -480,30 +422,10 @@ export default function Turnos() {
       setEditVehiculoContacto("");
       return;
     }
-    if (!valor) {
-      setEditAutoId("");
-      return;
-    }
-    const cId = Number(valor);
-    const idsAutosRelacionados = [
-      ...new Set(
-        clienteAutoRelaciones
-          .filter((ca) => Number(ca.cliente_id) === cId)
-          .map((ca) => Number(ca.auto_id)),
-      ),
-    ];
-
-    const autosDelCliente = autos.filter((a) =>
-      idsAutosRelacionados.includes(Number(a.id)),
-    );
-    if (autosDelCliente.length === 1) {
-      setEditAutoId(autosDelCliente[0].id.toString());
-    } else {
-      setEditAutoId("");
-    }
+    setEditAutoId("");
+    setEditVehiculoContacto("");
   };
 
-  // Manejador al cambiar el Auto en Edición (Bidireccional: auto -> cliente)
   const handleCambioAutoEdit = (valor) => {
     setEditAutoId(valor);
     if (valor === "OTRO") {
@@ -511,12 +433,14 @@ export default function Turnos() {
       return;
     }
     if (!valor) return;
+
     const aId = Number(valor);
     const relacion = clienteAutoRelaciones.find(
       (ca) => Number(ca.auto_id) === aId,
     );
     if (relacion && relacion.cliente_id) {
       setEditClienteId(relacion.cliente_id.toString());
+      setEditClienteNombre("");
     }
   };
 
@@ -536,13 +460,21 @@ export default function Turnos() {
     );
   };
 
+  const recargarTurnos = async () => {
+    try {
+      const resT = await fetch(ENDPOINT_TURNOS);
+      if (resT.ok) setTurnos(await resT.json());
+    } catch (error) {
+      console.error("Error al recargar turnos:", error);
+    }
+  };
+
   const handleCrearTurno = async (e) => {
     e.preventDefault();
     if (!nuevoFecha) {
       mostrarError("La fecha es obligatoria.");
       return;
     }
-    if (!validarFechaNoAnterior(nuevoFecha)) return;
 
     const clienteIdFinal =
       nuevoClienteId && nuevoClienteId !== "OTRO"
@@ -557,6 +489,11 @@ export default function Turnos() {
 
     if (!clienteIdFinal && !clienteNombreFinal) {
       mostrarError("Debes indicar un cliente.");
+      return;
+    }
+
+    if (!autoIdFinal && !vehiculoContactoFinal) {
+      mostrarError("Debes indicar un vehículo.");
       return;
     }
 
@@ -589,7 +526,7 @@ export default function Turnos() {
         setNuevoVehiculoContacto("");
         setNuevoServiciosIds([]);
         setNuevoObservaciones("");
-        await cargarDatos();
+        await recargarTurnos();
         mostrarExito("Turno agregado correctamente.");
       } else {
         const err = await res.json();
@@ -597,6 +534,7 @@ export default function Turnos() {
       }
     } catch (error) {
       console.error("Error al crear turno:", error);
+      mostrarError("Error de conexión al intentar crear el turno.");
     }
   };
 
@@ -605,7 +543,7 @@ export default function Turnos() {
     try {
       const res = await fetch(`${ENDPOINT_TURNOS}/${id}`, { method: "DELETE" });
       if (res.ok) {
-        await cargarDatos();
+        await recargarTurnos();
         mostrarExito("Turno eliminado con éxito.");
       }
     } catch (error) {
@@ -616,7 +554,8 @@ export default function Turnos() {
   const iniciarEdicion = (item) => {
     setEditId(item.id);
     if (item.fecha_hora) {
-      const partes = item.fecha_hora.split("T");
+      const normalizado = item.fecha_hora.replace("T", " ");
+      const partes = normalizado.split(" ");
       setEditFecha(partes[0] || "");
       setEditHora(partes[1] ? partes[1].slice(0, 5) : "");
     } else {
@@ -656,7 +595,6 @@ export default function Turnos() {
       mostrarError("La fecha es obligatoria.");
       return;
     }
-    if (!validarFechaNoAnterior(editFecha)) return;
 
     const clienteIdFinal =
       editClienteId && editClienteId !== "OTRO" ? Number(editClienteId) : null;
@@ -666,6 +604,16 @@ export default function Turnos() {
       editAutoId && editAutoId !== "OTRO" ? Number(editAutoId) : null;
     const vehiculoContactoFinal =
       editAutoId === "OTRO" ? editVehiculoContacto : null;
+
+    if (!clienteIdFinal && !clienteNombreFinal) {
+      mostrarError("Debes indicar un cliente.");
+      return;
+    }
+
+    if (!autoIdFinal && !vehiculoContactoFinal) {
+      mostrarError("Debes indicar un vehículo.");
+      return;
+    }
 
     const fechaHoraFinal = construirFechaHora(editFecha, editHora);
     const observacionesFinal = [
@@ -691,7 +639,7 @@ export default function Turnos() {
 
       if (res.ok) {
         cancelarEdicion();
-        await cargarDatos();
+        await recargarTurnos();
         mostrarExito("Turno actualizado con éxito.");
       } else {
         const err = await res.json();
@@ -704,29 +652,26 @@ export default function Turnos() {
 
   const turnosFiltrados = useMemo(() => {
     const ahora = new Date();
-    const anio = ahora.getFullYear();
-    const mes = String(ahora.getMonth() + 1).padStart(2, "0");
-    const dia = String(ahora.getDate()).padStart(2, "0");
-    const hoyStr = `${anio}-${mes}-${dia}`;
+    const hoyIsoStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
 
     return turnos
       .filter((t) => {
-        if (t.fecha_hora) {
-          const fechaTurnoStr = t.fecha_hora.split("T")[0];
-          if (fechaTurnoStr < hoyStr) return false;
-        }
-        return true;
-      })
-      .filter((t) => {
+        if (!t.fecha_hora) return false;
+        const normalizado = t.fecha_hora.replace("T", " ");
+        const fechaTurnoStr = normalizado.split(" ")[0];
+
+        // Filtramos para que no muestre turnos de días anteriores (comparación directa de strings YYYY-MM-DD)
+        if (fechaTurnoStr < hoyIsoStr) return false;
+
         const textoBusqueda = busqueda.toLowerCase().trim();
         const clienteTxt = (
           t.cliente_nombre ||
-          clientes.find((c) => c.id === t.cliente_id)?.nombre ||
+          clientes.find((c) => Number(c.id) === Number(t.cliente_id))?.nombre ||
           ""
         ).toLowerCase();
         const autoTxt = (
           t.vehiculo_contacto ||
-          autos.find((a) => a.id === t.auto_id)?.marca_modelo ||
+          autos.find((a) => Number(a.id) === Number(t.auto_id))?.marca_modelo ||
           ""
         ).toLowerCase();
 
@@ -735,11 +680,11 @@ export default function Turnos() {
         );
       })
       .sort((a, b) => {
-        const fechaA = a.fecha_hora ? new Date(a.fecha_hora) : new Date(0);
-        const fechaB = b.fecha_hora ? new Date(b.fecha_hora) : new Date(0);
-        return ordenAsc ? fechaA - fechaB : fechaB - fechaA;
+        const normA = a.fecha_hora.replace("T", " ");
+        const normB = b.fecha_hora.replace("T", " ");
+        return normA.localeCompare(normB);
       });
-  }, [turnos, busqueda, ordenAsc, clientes, autos]);
+  }, [turnos, busqueda, clientes, autos]);
 
   const cambiarMes = (delta) => {
     setFechaCalendario(
@@ -793,36 +738,42 @@ export default function Turnos() {
     return celdas;
   }, [fechaCalendario]);
 
-  // Autos disponibles en Alta (con deduplicación de IDs limpios)
   const autosDisponiblesAlta = useMemo(() => {
-    if (!nuevoClienteId || nuevoClienteId === "OTRO") {
-      return autos; // Si no hay cliente seleccionado, muestra todos o permite buscar libremente
+    let lista = autos;
+    if (nuevoClienteId && nuevoClienteId !== "OTRO") {
+      const cId = Number(nuevoClienteId);
+      const idsValidos = clienteAutoRelaciones
+        .filter((ca) => Number(ca.cliente_id) === cId)
+        .map((ca) => Number(ca.auto_id));
+      lista = autos.filter((a) => idsValidos.includes(Number(a.id)));
     }
-    const cId = Number(nuevoClienteId);
-    const idsValidos = [
-      ...new Set(
-        clienteAutoRelaciones
-          .filter((ca) => Number(ca.cliente_id) === cId)
-          .map((ca) => Number(ca.auto_id)),
-      ),
-    ];
-    return autos.filter((a) => idsValidos.includes(Number(a.id)));
+    const unicosMap = new Map();
+    lista.forEach((auto) => {
+      const autoIdNum = Number(auto.id);
+      if (!unicosMap.has(autoIdNum)) {
+        unicosMap.set(autoIdNum, auto);
+      }
+    });
+    return Array.from(unicosMap.values());
   }, [autos, clienteAutoRelaciones, nuevoClienteId]);
 
-  // Autos disponibles en Edición (con deduplicación de IDs limpios)
   const autosDisponiblesEdit = useMemo(() => {
-    if (!editClienteId || editClienteId === "OTRO") {
-      return autos;
+    let lista = autos;
+    if (editClienteId && editClienteId !== "OTRO") {
+      const cId = Number(editClienteId);
+      const idsValidos = clienteAutoRelaciones
+        .filter((ca) => Number(ca.cliente_id) === cId)
+        .map((ca) => Number(ca.auto_id));
+      lista = autos.filter((a) => idsValidos.includes(Number(a.id)));
     }
-    const cId = Number(editClienteId);
-    const idsValidos = [
-      ...new Set(
-        clienteAutoRelaciones
-          .filter((ca) => Number(ca.cliente_id) === cId)
-          .map((ca) => Number(ca.auto_id)),
-      ),
-    ];
-    return autos.filter((a) => idsValidos.includes(Number(a.id)));
+    const unicosMap = new Map();
+    lista.forEach((auto) => {
+      const autoIdNum = Number(auto.id);
+      if (!unicosMap.has(autoIdNum)) {
+        unicosMap.set(autoIdNum, auto);
+      }
+    });
+    return Array.from(unicosMap.values());
   }, [autos, clienteAutoRelaciones, editClienteId]);
 
   const ahoraIso = new Date();
@@ -857,7 +808,6 @@ export default function Turnos() {
       )}
       {mensajeError && <div style={styles.toastError}>{mensajeError}</div>}
 
-      {/* BARRA DE BÚSQUEDA */}
       <div style={styles.topBar}>
         <div style={{ width: "320px" }}>
           <input
@@ -865,94 +815,70 @@ export default function Turnos() {
             placeholder="🔍 Buscar por cliente o vehículo..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={styles.input}
+            style={styles.inputControl}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => setOrdenAsc(!ordenAsc)}
-          style={styles.btnSecondary}
-        >
-          Ordenar por Fecha: {ordenAsc ? "Más próximo ▲" : "Más lejano ▼"}
-        </button>
       </div>
 
-      {/* FORMULARIO DE ALTA RÁPIDA */}
       <div style={styles.card}>
         <h3 style={{ margin: "0 0 12px 0", color: "#334155" }}>
           Registrar Nuevo Turno
         </h3>
 
-        <form
-          onSubmit={handleCrearTurno}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "10px",
-            alignItems: "end",
-          }}
-        >
-          <div>
-            <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Fecha *
-            </label>
+        <form onSubmit={handleCrearTurno} style={styles.formAlta}>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Fecha *</label>
             <input
               type="date"
               required
               min={hoyIso}
               value={nuevoFecha}
               onChange={(e) => setNuevoFecha(e.target.value)}
-              style={styles.inputSmall}
+              style={styles.inputControl}
             />
           </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Hora (Opcional)
-            </label>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Hora</label>
             <input
               type="time"
               value={nuevoHora}
               onChange={(e) => setNuevoHora(e.target.value)}
-              style={styles.inputSmall}
+              style={styles.inputControl}
             />
           </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Cliente *
-            </label>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Cliente *</label>
             <select
               value={nuevoClienteId}
               onChange={(e) => handleCambioClienteNuevo(e.target.value)}
-              style={styles.selectSmall}
+              style={styles.inputControl}
             >
-              <option value="">-- Seleccionar cliente --</option>
+              <option value="">-- Seleccionar --</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
                 </option>
               ))}
-              <option value="OTRO">Otro (Escribir nombre)</option>
+              <option value="OTRO">Otro</option>
             </select>
             {nuevoClienteId === "OTRO" && (
               <input
                 type="text"
-                placeholder="Nombre del cliente"
+                placeholder="Nombre"
                 value={nuevoClienteNombre}
                 onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                style={styles.inputSmall}
+                style={{ ...styles.inputControl, marginTop: "6px" }}
               />
             )}
           </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Auto *
-            </label>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Auto *</label>
             <select
               value={nuevoAutoId}
               onChange={(e) => handleCambioAutoNuevo(e.target.value)}
-              style={styles.selectSmall}
+              style={styles.inputControl}
             >
-              <option value="">-- Seleccionar auto --</option>
+              <option value="">-- Seleccionar --</option>
               {autosDisponiblesAlta.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.marca_modelo} {a.patente ? `(${a.patente})` : ""}
@@ -963,17 +889,15 @@ export default function Turnos() {
             {nuevoAutoId === "OTRO" && (
               <input
                 type="text"
-                placeholder="Descripción del vehículo"
+                placeholder="Vehículo"
                 value={nuevoVehiculoContacto}
                 onChange={(e) => setNuevoVehiculoContacto(e.target.value)}
-                style={styles.inputSmall}
+                style={{ ...styles.inputControl, marginTop: "6px" }}
               />
             )}
           </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Servicios
-            </label>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Servicios</label>
             <div style={styles.dropdownSelectBox}>
               <button
                 type="button"
@@ -982,10 +906,10 @@ export default function Turnos() {
                   setMenuServiciosNuevoAbierto(!menuServiciosNuevoAbierto)
                 }
               >
-                <span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                   {nuevoServiciosIds.length > 0
-                    ? `${nuevoServiciosIds.length} servicio(s) seleccionado(s)`
-                    : "-- Seleccionar servicios --"}
+                    ? `${nuevoServiciosIds.length} sel.`
+                    : "Seleccionar"}
                 </span>
                 <span>▼</span>
               </button>
@@ -1010,25 +934,15 @@ export default function Turnos() {
                 </div>
               )}
             </div>
-            {nuevoServiciosIds.length > 0 && (
-              <div style={styles.selectedTagsContainer}>
-                {nuevoServiciosIds.map((srv, idx) => (
-                  <span key={idx} style={styles.miniPill}>
-                    {srv}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
-          <div>
+          <div style={styles.fieldGroup}>
             <button type="submit" style={styles.btnSuccess}>
-              + Agregar Turno
+              + Agregar
             </button>
           </div>
         </form>
       </div>
 
-      {/* VISTA TABLA */}
       {vista === "tabla" && (
         <div style={styles.card}>
           <table style={styles.table}>
@@ -1049,11 +963,12 @@ export default function Turnos() {
               {turnosFiltrados.length > 0 ? (
                 turnosFiltrados.map((item) => {
                   const enEdicion = editId === item.id;
-
                   const clienteObj = clientes.find(
-                    (c) => c.id === item.cliente_id,
+                    (c) => Number(c.id) === Number(item.cliente_id),
                   );
-                  const autoObj = autos.find((a) => a.id === item.auto_id);
+                  const autoObj = autos.find(
+                    (a) => Number(a.id) === Number(item.auto_id),
+                  );
 
                   const nombreClienteMostrado =
                     item.cliente_nombre ||
@@ -1075,21 +990,17 @@ export default function Turnos() {
                               min={hoyIso}
                               value={editFecha}
                               onChange={(e) => setEditFecha(e.target.value)}
-                              style={styles.inputSmall}
+                              style={styles.inputControl}
                             />
                             <input
                               type="time"
                               value={editHora}
                               onChange={(e) => setEditHora(e.target.value)}
-                              style={styles.inputSmall}
+                              style={styles.inputControl}
                             />
                           </div>
                         ) : (
-                          <span>
-                            {item.fecha_hora
-                              ? new Date(item.fecha_hora).toLocaleString()
-                              : "Sin horario fijo"}
-                          </span>
+                          <span>{formatearFechaHora24hs(item.fecha_hora)}</span>
                         )}
                       </td>
                       <td style={styles.td}>
@@ -1100,11 +1011,9 @@ export default function Turnos() {
                               onChange={(e) =>
                                 handleCambioClienteEdit(e.target.value)
                               }
-                              style={styles.selectSmall}
+                              style={styles.inputControl}
                             >
-                              <option value="">
-                                -- Seleccionar cliente --
-                              </option>
+                              <option value="">-- Seleccionar --</option>
                               {clientes.map((c) => (
                                 <option key={c.id} value={c.id}>
                                   {c.nombre}
@@ -1120,7 +1029,10 @@ export default function Turnos() {
                                 onChange={(e) =>
                                   setEditClienteNombre(e.target.value)
                                 }
-                                style={styles.inputSmall}
+                                style={{
+                                  ...styles.inputControl,
+                                  marginTop: "4px",
+                                }}
                               />
                             )}
                           </div>
@@ -1138,9 +1050,9 @@ export default function Turnos() {
                               onChange={(e) =>
                                 handleCambioAutoEdit(e.target.value)
                               }
-                              style={styles.selectSmall}
+                              style={styles.inputControl}
                             >
-                              <option value="">-- Seleccionar auto --</option>
+                              <option value="">-- Seleccionar --</option>
                               {autosDisponiblesEdit.map((a) => (
                                 <option key={a.id} value={a.id}>
                                   {a.marca_modelo}{" "}
@@ -1157,7 +1069,10 @@ export default function Turnos() {
                                 onChange={(e) =>
                                   setEditVehiculoContacto(e.target.value)
                                 }
-                                style={styles.inputSmall}
+                                style={{
+                                  ...styles.inputControl,
+                                  marginTop: "4px",
+                                }}
                               />
                             )}
                           </div>
@@ -1167,57 +1082,46 @@ export default function Turnos() {
                       </td>
                       <td style={styles.td}>
                         {enEdicion ? (
-                          <div>
-                            <div style={styles.dropdownSelectBox}>
-                              <button
-                                type="button"
-                                style={styles.dropdownToggleBtn}
-                                onClick={() =>
-                                  setMenuServiciosEditAbierto(
-                                    menuServiciosEditAbierto === item.id
-                                      ? null
-                                      : item.id,
-                                  )
-                                }
-                              >
-                                <span>
-                                  {editServiciosIds.length > 0
-                                    ? `${editServiciosIds.length} servicio(s) seleccionado(s)`
-                                    : "-- Seleccionar servicios --"}
-                                </span>
-                                <span>▼</span>
-                              </button>
-                              {menuServiciosEditAbierto === item.id && (
-                                <div style={styles.dropdownList}>
-                                  {servicios.map((s) => {
-                                    const seleccionado =
-                                      editServiciosIds.includes(s.nombre);
-                                    return (
-                                      <div
-                                        key={s.id}
-                                        style={
-                                          seleccionado
-                                            ? styles.servicioTagItemActive
-                                            : styles.servicioTagItem
-                                        }
-                                        onClick={() =>
-                                          toggleServicioEdit(s.nombre)
-                                        }
-                                      >
-                                        {s.nombre}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                            {editServiciosIds.length > 0 && (
-                              <div style={styles.selectedTagsContainer}>
-                                {editServiciosIds.map((srv, idx) => (
-                                  <span key={idx} style={styles.miniPill}>
-                                    {srv}
-                                  </span>
-                                ))}
+                          <div style={styles.dropdownSelectBox}>
+                            <button
+                              type="button"
+                              style={styles.dropdownToggleBtn}
+                              onClick={() =>
+                                setMenuServiciosEditAbierto(
+                                  menuServiciosEditAbierto === item.id
+                                    ? null
+                                    : item.id,
+                                )
+                              }
+                            >
+                              <span>
+                                {editServiciosIds.length > 0
+                                  ? `${editServiciosIds.length} sel.`
+                                  : "Seleccionar"}
+                              </span>
+                              <span>▼</span>
+                            </button>
+                            {menuServiciosEditAbierto === item.id && (
+                              <div style={styles.dropdownList}>
+                                {servicios.map((s) => {
+                                  const seleccionado =
+                                    editServiciosIds.includes(s.nombre);
+                                  return (
+                                    <div
+                                      key={s.id}
+                                      style={
+                                        seleccionado
+                                          ? styles.servicioTagItemActive
+                                          : styles.servicioTagItem
+                                      }
+                                      onClick={() =>
+                                        toggleServicioEdit(s.nombre)
+                                      }
+                                    >
+                                      {s.nombre}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -1241,8 +1145,10 @@ export default function Turnos() {
                               onClick={() => handleGuardarEdicion(item.id)}
                               style={{
                                 ...styles.btnSuccess,
-                                padding: "6px 10px",
+                                height: "32px",
+                                padding: "0 10px",
                                 fontSize: "0.75rem",
+                                width: "auto",
                               }}
                             >
                               Guardar
@@ -1252,7 +1158,8 @@ export default function Turnos() {
                               onClick={cancelarEdicion}
                               style={{
                                 ...styles.btnSecondary,
-                                padding: "6px 10px",
+                                height: "32px",
+                                padding: "0 10px",
                                 fontSize: "0.75rem",
                               }}
                             >
@@ -1272,7 +1179,8 @@ export default function Turnos() {
                               onClick={() => iniciarEdicion(item)}
                               style={{
                                 ...styles.btnPrimary,
-                                padding: "6px 10px",
+                                height: "32px",
+                                padding: "0 10px",
                                 fontSize: "0.75rem",
                               }}
                             >
@@ -1283,7 +1191,8 @@ export default function Turnos() {
                               onClick={() => handleEliminarTurno(item.id)}
                               style={{
                                 ...styles.btnDanger,
-                                padding: "6px 10px",
+                                height: "32px",
+                                padding: "0 10px",
                                 fontSize: "0.75rem",
                               }}
                             >
@@ -1314,7 +1223,6 @@ export default function Turnos() {
         </div>
       )}
 
-      {/* VISTA ALMANAQUE (CALENDARIO) */}
       {vista === "almanaque" && (
         <div style={styles.card}>
           <div style={styles.calendarHeaderNav}>
@@ -1369,12 +1277,18 @@ export default function Turnos() {
                     {matrizDiasMes
                       .slice(semanaIdx * 7, (semanaIdx + 1) * 7)
                       .map((celda, diaIdx) => {
-                        const fechaIso = `${celda.fechaObj.getFullYear()}-${String(celda.fechaObj.getMonth() + 1).padStart(2, "0")}-${String(celda.fechaObj.getDate()).padStart(2, "0")}`;
+                        const fechaIso = `${celda.fechaObj.getFullYear()}-${String(
+                          celda.fechaObj.getMonth() + 1,
+                        ).padStart(
+                          2,
+                          "0",
+                        )}-${String(celda.fechaObj.getDate()).padStart(2, "0")}`;
                         const esHoy = fechaIso === hoyIso;
 
                         const turnosDelDia = turnos.filter((t) => {
                           if (!t.fecha_hora) return false;
-                          return t.fecha_hora.split("T")[0] === fechaIso;
+                          const normalizado = t.fecha_hora.replace("T", " ");
+                          return normalizado.split(" ")[0] === fechaIso;
                         });
 
                         let cellStyle = styles.calendarCell;
@@ -1394,13 +1308,18 @@ export default function Turnos() {
                             >
                               {turnosDelDia.map((t) => {
                                 const clienteObj = clientes.find(
-                                  (c) => c.id === t.cliente_id,
+                                  (c) => Number(c.id) === Number(t.cliente_id),
                                 );
                                 const nombreCli =
                                   t.cliente_nombre ||
                                   (clienteObj ? clienteObj.nombre : "Turno");
-                                const hora = t.fecha_hora
-                                  ? t.fecha_hora.split("T")[1]?.slice(0, 5)
+                                const normalizado = t.fecha_hora.replace(
+                                  "T",
+                                  " ",
+                                );
+                                const partesFecha = normalizado.split(" ");
+                                const hora = partesFecha[1]
+                                  ? partesFecha[1].slice(0, 5)
                                   : "";
 
                                 return (

@@ -125,18 +125,20 @@ const styles = {
 
 const ENDPOINT_CLIENTES = "http://localhost:3000/api/clientes";
 const ENDPOINT_AUTOS = "http://localhost:3000/api/autos";
+const ENDPOINT_CLIENTE_AUTO = "http://localhost:3000/api/turnos/cliente-auto";
 const ENDPOINT_SERVICIOS = "http://localhost:3000/api/servicios";
 
 export default function Presupuesto() {
   const [clientes, setClientes] = useState([]);
   const [autos, setAutos] = useState([]);
+  const [clienteAutoRelaciones, setClienteAutoRelaciones] = useState([]);
   const [serviciosOriginales, setServiciosOriginales] = useState([]);
 
   // Búsqueda y ordenamiento
   const [busqueda, setBusqueda] = useState("");
   const [ordenAsc, setOrdenAsc] = useState(true);
 
-  // Selección de cliente y auto
+  // Selección de cliente y auto (idéntico a Turnos.jsx)
   const [clienteId, setClienteId] = useState("");
   const [clienteNombre, setClienteNombre] = useState("");
   const [autoId, setAutoId] = useState("");
@@ -152,14 +154,16 @@ export default function Presupuesto() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [resC, resA, resS] = await Promise.all([
+        const [resC, resA, resCA, resS] = await Promise.all([
           fetch(ENDPOINT_CLIENTES),
           fetch(ENDPOINT_AUTOS),
+          fetch(ENDPOINT_CLIENTE_AUTO),
           fetch(ENDPOINT_SERVICIOS),
         ]);
 
         if (resC.ok) setClientes(await resC.json());
         if (resA.ok) setAutos(await resA.json());
+        if (resCA.ok) setClienteAutoRelaciones(await resCA.json());
         if (resS.ok) setServiciosOriginales(await resS.json());
       } catch (error) {
         console.error("Error al cargar datos para el presupuesto:", error);
@@ -168,48 +172,66 @@ export default function Presupuesto() {
     cargarDatos();
   }, []);
 
-  // Lógica de clientes / autos
-  const handleCambioCliente = (valor) => {
+  // Lógica de clientes / autos idéntica a Turnos.jsx
+  const handleCambioCliente = (e) => {
+    const valor = e.target.value;
     setClienteId(valor);
+
     if (valor === "OTRO") {
       setClienteNombre("");
       setAutoId("OTRO");
       setVehiculoContacto("");
       return;
     }
+
     if (!valor) {
       setAutoId("");
+      setVehiculoContacto("");
       return;
     }
-    const cId = Number(valor);
-    const autosDelCliente = autos.filter((a) => Number(a.cliente_id) === cId);
-    if (autosDelCliente.length === 1) {
-      setAutoId(autosDelCliente[0].id.toString());
+
+    const rel = clienteAutoRelaciones.find(
+      (item) => Number(item.cliente_id) === Number(valor),
+    );
+    if (rel) {
+      setAutoId(rel.auto_id.toString());
+      setVehiculoContacto("");
     } else {
       setAutoId("");
+      setVehiculoContacto("");
     }
   };
 
-  const handleCambioAuto = (valor) => {
+  const handleCambioAuto = (e) => {
+    const valor = e.target.value;
     setAutoId(valor);
+
     if (valor === "OTRO") {
       setVehiculoContacto("");
       return;
     }
+
     if (!valor) return;
-    const aId = Number(valor);
-    const autoEncontrado = autos.find((a) => Number(a.id) === aId);
-    if (autoEncontrado && autoEncontrado.cliente_id) {
-      setClienteId(autoEncontrado.cliente_id.toString());
+
+    const rel = clienteAutoRelaciones.find(
+      (item) => Number(item.auto_id) === Number(valor),
+    );
+    if (rel) {
+      setClienteId(rel.cliente_id.toString());
+      setClienteNombre("");
     }
   };
 
   const autosDisponibles = useMemo(() => {
     if (!clienteId || clienteId === "OTRO") return autos;
-    return autos.filter((a) => Number(a.cliente_id) === Number(clienteId));
-  }, [autos, clienteId]);
+    const idsAutosDelCliente = clienteAutoRelaciones
+      .filter((item) => Number(item.cliente_id) === Number(clienteId))
+      .map((item) => Number(item.auto_id));
 
-  // Selección de servicios
+    return autos.filter((a) => idsAutosDelCliente.includes(Number(a.id)));
+  }, [autos, clienteAutoRelaciones, clienteId]);
+
+  // Selección de servicios (clic en la fila, pinta de azul claro)
   const toggleSeleccionServicio = (item) => {
     setServiciosPresupuesto((prev) => {
       const nuevo = { ...prev };
@@ -302,7 +324,6 @@ export default function Presupuesto() {
     const fechaActual = new Date().toLocaleDateString("es-AR");
     const fechaLimpia = fechaActual.replace(/\//g, "-");
 
-    // Construcción del nombre del archivo según los datos disponibles
     let partesNombre = [];
     if (nombreClienteTexto.trim()) partesNombre.push(nombreClienteTexto.trim());
     if (nombreAutoTexto.trim()) partesNombre.push(nombreAutoTexto.trim());
@@ -310,7 +331,6 @@ export default function Presupuesto() {
 
     const nombreArchivo = `${partesNombre.join("-")}.pdf`;
 
-    // Preparar el HTML opcional para el cliente y vehículo dentro del PDF
     let htmlClienteAuto = "";
     if (nombreClienteTexto) {
       htmlClienteAuto += `<p style="margin: 4px 0; font-size: 0.9rem;"><strong>Cliente:</strong> ${nombreClienteTexto}</p>`;
@@ -322,7 +342,6 @@ export default function Presupuesto() {
       htmlClienteAuto = `<p style="margin: 4px 0; font-size: 0.9rem; color: #64748b;">Consumidor Final / Vehículo Genérico</p>`;
     }
 
-    // Elemento HTML temporal para renderizar el contenido del PDF
     const contenedorTemp = document.createElement("div");
     contenedorTemp.style.padding = "20px";
     contenedorTemp.style.fontFamily = "Helvetica, Arial, sans-serif";
@@ -386,6 +405,7 @@ export default function Presupuesto() {
 
     html2pdf().set(opciones).from(contenedorTemp).save();
   };
+
   return (
     <div style={styles.container}>
       <h1 style={styles.header}>Generar Presupuesto</h1>
@@ -409,7 +429,7 @@ export default function Presupuesto() {
             </label>
             <select
               value={clienteId}
-              onChange={(e) => handleCambioCliente(e.target.value)}
+              onChange={handleCambioCliente}
               style={styles.selectSmall}
             >
               <option value="">-- Seleccionar cliente (Opcional) --</option>
@@ -444,7 +464,7 @@ export default function Presupuesto() {
             </label>
             <select
               value={autoId}
-              onChange={(e) => handleCambioAuto(e.target.value)}
+              onChange={handleCambioAuto}
               style={styles.selectSmall}
             >
               <option value="">-- Seleccionar auto (Opcional) --</option>
@@ -471,7 +491,7 @@ export default function Presupuesto() {
       {/* TABLA DE SERVICIOS */}
       <div style={styles.card}>
         <h3 style={{ margin: "0 0 16px 0", color: "#334155" }}>
-          2. Seleccionar y Personalizar Servicios
+          2. Seleccionar Servicios
         </h3>
 
         <div style={styles.topBar}>
@@ -489,9 +509,6 @@ export default function Presupuesto() {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={{ ...styles.th, width: "50px", textAlign: "center" }}>
-                Sel.
-              </th>
               <th style={styles.th} onClick={() => setOrdenAsc(!ordenAsc)}>
                 Servicio {ordenAsc ? "▲" : "▼"}
               </th>
@@ -513,28 +530,18 @@ export default function Presupuesto() {
                 return (
                   <tr
                     key={item.id}
+                    onClick={() => toggleSeleccionServicio(item)}
                     style={{
-                      backgroundColor: seleccionado ? "#f8fafc" : "transparent",
+                      backgroundColor: seleccionado ? "#eff6ff" : "transparent",
+                      cursor: "pointer",
                     }}
                   >
-                    <td style={{ ...styles.td, textAlign: "center" }}>
-                      <input
-                        type="checkbox"
-                        checked={seleccionado}
-                        onChange={() => toggleSeleccionServicio(item)}
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </td>
                     <td style={styles.td}>
                       <span style={{ fontWeight: "500", color: "#1e293b" }}>
                         {item.nombre}
                       </span>
                     </td>
-                    <td style={styles.td}>
+                    <td style={styles.td} onClick={(e) => e.stopPropagation()}>
                       {seleccionado ? (
                         enEdicion ? (
                           <div>
@@ -638,7 +645,10 @@ export default function Presupuesto() {
                         </span>
                       )}
                     </td>
-                    <td style={{ ...styles.td, textAlign: "center" }}>
+                    <td
+                      style={{ ...styles.td, textAlign: "center" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {seleccionado ? (
                         <input
                           type="number"
@@ -663,7 +673,7 @@ export default function Presupuesto() {
             ) : (
               <tr>
                 <td
-                  colSpan="4"
+                  colSpan="3"
                   style={{
                     ...styles.td,
                     color: "#64748b",

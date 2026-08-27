@@ -9,10 +9,10 @@ import {
 
 const router = Router();
 
-router.get("/turnos", obtenerTurnos);
-router.get("/cliente_auto", obtenerClienteAuto); // <--- IMPORTANTE
-router.post("/turnos", crearTurno);
-router.put("/turnos/:id", actualizarTurno);
-router.delete("/turnos/:id", eliminarTurno);
+router.get("/", obtenerTurnos);
+router.get("/cliente-auto", obtenerClienteAuto);
+router.post("/", crearTurno);
+router.put("/:id", actualizarTurno);
+router.delete("/:id", eliminarTurno);
 
 export default router;

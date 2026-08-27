@@ -1,40 +1,46 @@
-import { useState } from "react";
+// components/Dashboard.jsx
+import { useState, useEffect } from "react";
+
+const ENDPOINT_TURNOS = "http://localhost:3000/api/turnos";
+const ENDPOINT_ESCASES_STOCK = "http://localhost:3000/api/escasesdestock";
 
 const Dashboard = ({ onNavigate }) => {
-  const [busqueda, setBusqueda] = useState("");
   const [mostrarModalTurnos, setMostrarModalTurnos] = useState(true);
+  const [turnosDelDia, setTurnosDelDia] = useState([]);
+  const [productosStockBajo, setProductosStockBajo] = useState([]);
 
-  // Turnos de ejemplo para la ventana flotante del día
-  const [turnosDelDia] = useState([
-    {
-      id: 1,
-      hora: "09:00",
-      cliente: "Juan Pérez",
-      vehiculo: "Toyota Hilux (AB123CD)",
-      servicio: "Cambio de Aceite y Filtro",
-    },
-    {
-      id: 2,
-      hora: "11:30",
-      cliente: "Carlos Gómez",
-      vehiculo: "VW Gol (AA456EF)",
-      servicio: "Revisión General",
-    },
-    {
-      id: 3,
-      hora: "16:00",
-      cliente: "María Rossi",
-      vehiculo: "Ford EcoSport (AD789GH)",
-      servicio: "Alineación y Balanza",
-    },
-  ]);
+  // Cargar turnos de hoy desde la BD y escasez de stock
+  useEffect(() => {
+    const cargarDatosDashboard = async () => {
+      try {
+        const [resTurnos, resEscasez] = await Promise.all([
+          fetch(ENDPOINT_TURNOS),
+          fetch(ENDPOINT_ESCASES_STOCK).catch(() => ({ ok: false })),
+        ]);
 
-  const handleBuscar = (e) => {
-    e.preventDefault();
-    if (busqueda.trim()) {
-      onNavigate("clientes", { busqueda: busqueda.trim() });
-    }
-  };
+        if (resTurnos.ok) {
+          const todosLosTurnos = await resTurnos.json();
+          const hoyStr = new Date().toISOString().split("T")[0];
+
+          const filtrados = todosLosTurnos.filter((t) => {
+            if (!t.fecha_hora) return false;
+            return t.fecha_hora.startsWith(hoyStr);
+          });
+
+          setTurnosDelDia(filtrados);
+        }
+
+        if (resEscasez && resEscasez.ok) {
+          const escasezData = await resEscasez.json();
+          setProductosStockBajo(escasezData);
+        }
+      } catch (error) {
+        console.error("Error al cargar datos del dashboard:", error);
+      }
+    };
+
+    cargarDatosDashboard();
+  }, []);
 
   const modulos = [
     {
@@ -47,7 +53,7 @@ const Dashboard = ({ onNavigate }) => {
     },
     {
       id: "mercaderia",
-      titulo: "Mercadería",
+      titulo: "Mercadería y Proveedores",
       icono: "📦",
       color: "#1565c0",
       descripcion:
@@ -97,69 +103,55 @@ const Dashboard = ({ onNavigate }) => {
       style={{
         maxWidth: "1100px",
         margin: "0 auto",
-        padding: "15px 20px",
+        padding: "0 20px",
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      {/* BUSCADOR RÁPIDO (MÁS COMPACTO) */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-          color: "white",
-          padding: "12px 20px",
-          borderRadius: "8px",
-          marginBottom: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "15px",
-        }}
-      >
-        <span
+      {/* BANNER FIJO Y DISCRETO DE STOCK BAJO */}
+      {productosStockBajo.length > 0 && (
+        <div
+          onClick={() => onNavigate("mercaderia")}
           style={{
-            fontSize: "0.95rem",
-            fontWeight: "500",
-            whiteSpace: "nowrap",
+            background: "#fff1f2",
+            border: "1px solid #fecdd3",
+            borderRadius: "6px",
+            padding: "8px 14px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "10px",
+            cursor: "pointer",
+            transition: "background 0.2s",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#ffe4e6")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#fff1f2")}
         >
-          🔍 Búsqueda rápida:
-        </span>
-        <form
-          onSubmit={handleBuscar}
-          style={{ display: "flex", gap: "8px", flex: "1", maxWidth: "600px" }}
-        >
-          <input
-            type="text"
-            placeholder="Ingrese patente o nombre del cliente..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "1rem" }}>⚠️</span>
+            <span
+              style={{
+                fontSize: "0.84rem",
+                fontWeight: "500",
+                color: "#991b1b",
+              }}
+            >
+              Atención: Hay <strong>{productosStockBajo.length}</strong>{" "}
+              producto(s) con escasez de stock registrada.
+            </span>
+          </div>
+          <span
             style={{
-              flex: "1",
-              padding: "8px 12px",
-              fontSize: "0.9rem",
-              borderRadius: "5px",
-              border: "none",
-              outline: "none",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              padding: "8px 16px",
-              background: "#22c55e",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
+              fontSize: "0.78rem",
               fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "0.85rem",
+              color: "#b91c1c",
             }}
           >
-            Buscar
-          </button>
-        </form>
-      </div>
+            Ver Mercadería y Proveedores →
+          </span>
+        </div>
+      )}
 
       {/* GRILLA DE MÓDULOS */}
       <div
@@ -243,7 +235,7 @@ const Dashboard = ({ onNavigate }) => {
         ))}
       </div>
 
-      {/* VENTANA FLOTANTE DE TURNOS DEL DÍA */}
+      {/* VENTANA FLOTANTE DE TURNOS DE HOY (Desde la BD) */}
       {mostrarModalTurnos && (
         <div
           style={{
@@ -265,7 +257,7 @@ const Dashboard = ({ onNavigate }) => {
               color: "white",
               padding: "10px 14px",
               display: "flex",
-              justify: "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
             }}
           >
@@ -288,41 +280,54 @@ const Dashboard = ({ onNavigate }) => {
             style={{ padding: "12px", maxHeight: "220px", overflowY: "auto" }}
           >
             {turnosDelDia.length === 0 ? (
-              <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#64748b",
+                  fontSize: "0.85rem",
+                  textAlign: "center",
+                }}
+              >
                 No hay turnos agendados para hoy.
               </p>
             ) : (
-              turnosDelDia.map((t) => (
-                <div
-                  key={t.id}
-                  style={{
-                    borderBottom: "1px solid #f1f5f9",
-                    paddingBottom: "6px",
-                    marginBottom: "6px",
-                  }}
-                >
+              turnosDelDia.map((t) => {
+                const horaTurno = t.fecha_hora.split(" ")[1]?.slice(0, 5) || "";
+                return (
                   <div
+                    key={t.id}
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: "0.82rem",
-                      fontWeight: "bold",
+                      borderBottom: "1px solid #f1f5f9",
+                      paddingBottom: "6px",
+                      marginBottom: "6px",
                     }}
                   >
-                    <span style={{ color: "#0284c7" }}>⏰ {t.hora} hs</span>
-                    <span>{t.vehiculo}</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.82rem",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      <span style={{ color: "#0284c7" }}>
+                        ⏰ {horaTurno} hs
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        color: "#334155",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {t.cliente_nombre ||
+                        `Cliente ID: ${t.cliente_id || "Genérico"}`}{" "}
+                      - <em>{t.observaciones || "Sin observaciones"}</em>
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.78rem",
-                      color: "#334155",
-                      marginTop: "2px",
-                    }}
-                  >
-                    {t.cliente} - <em>{t.servicio}</em>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           <div
