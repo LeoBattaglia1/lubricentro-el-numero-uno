@@ -529,8 +529,6 @@ export default function TrabajosRealizados({ onVolver }) {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Registrar Trabajo Realizado</h1>
-
       {modalAlerta.visible && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -555,7 +553,7 @@ export default function TrabajosRealizados({ onVolver }) {
       <form onSubmit={handleSubmit}>
         <div style={styles.card}>
           <h3 style={{ margin: "0 0 16px 0", color: "#334155" }}>
-            1. Vehículo
+            1. Vehículo/Particular
           </h3>
 
           <div style={styles.radioGroup}>
@@ -1053,7 +1051,7 @@ export default function TrabajosRealizados({ onVolver }) {
               </select>
             </div>
 
-            {(tipoPago === "pendiente" || tipoOperacion === "particular") && (
+            {tipoPago === "pendiente" && (
               <div>
                 <label
                   style={{
@@ -1097,10 +1095,7 @@ export default function TrabajosRealizados({ onVolver }) {
                         marginBottom:
                           clienteSeleccionadoId === "nuevo" ? "8px" : "0",
                       }}
-                      required={
-                        tipoPago === "pendiente" ||
-                        tipoOperacion === "particular"
-                      }
+                      required={tipoPago === "pendiente"}
                     >
                       <option value="">-- Seleccionar cliente --</option>
                       <option value="nuevo">➕ Agregar nuevo cliente...</option>

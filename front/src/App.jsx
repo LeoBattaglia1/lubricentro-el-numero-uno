@@ -8,6 +8,7 @@ import TrabajoRealizado from "./components/TrabajoRealizado";
 import Turnos from "./components/Turnos";
 import Presupuestos from "./components/Presupuestos";
 import Caja from "./components/Caja";
+import logo from "./logo.jpg";
 
 function App() {
   const [vistaActual, setVistaActual] = useState("dashboard");
@@ -45,6 +46,18 @@ function App() {
     setParamsNavegacion({});
   };
 
+  // Nombres descriptivos para cada ventana en el centro del header
+  const nombresVistas = {
+    dashboard: "Inicio",
+    clientes: "Clientes y Vehículos",
+    mercaderia: "Mercadería y Proveedores",
+    servicios: "Servicios",
+    trabajo_realizado: "Trabajo Realizado o venta",
+    turnos: "Turnos",
+    presupuestos: "Presupuestos",
+    caja: "Caja y Pagos",
+  };
+
   return (
     <div
       style={{
@@ -53,32 +66,84 @@ function App() {
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      {/* HEADER DE LA APLICACIÓN (Con Título, Fecha y Hora global) */}
+      {/* HEADER DE LA APLICACIÓN */}
       <header
         style={{
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          background: "#000000",
           color: "white",
-          padding: "15px 20px",
+          padding: "8px 20px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+          flexWrap: "nowrap",
+          gap: "20px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
         }}
       >
-        <div>
-          <h1
-            onClick={handleVolver}
+        {/* Izquierda: Logo */}
+        <img
+          src={logo}
+          alt="Logo Taller"
+          onClick={handleVolver}
+          style={{
+            height: "85px",
+            cursor: "pointer",
+            objectFit: "contain",
+            flexShrink: 0,
+          }}
+        />
+
+        {/* Centro: Nombre de la ventana seleccionada */}
+        <div style={{ textAlign: "center", flex: 1, overflow: "hidden" }}>
+          <span
             style={{
-              margin: 0,
-              fontSize: "1.3rem",
+              color: "#e2e8f0",
+              fontSize: "2.1rem",
               fontWeight: "600",
-              cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
-            🛠️ Taller Mecánico / Lubricentro
-          </h1>
+            {nombresVistas[vistaActual] || ""}
+          </span>
+        </div>
+
+        {/* Derecha: Hora y Fecha debajo */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: "2px",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <span
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: "bold",
+                color: "#38bdf8",
+              }}
+            >
+              {horaFormateada}
+            </span>
+            {vistaActual !== "dashboard" && (
+              <button
+                onClick={handleVolver}
+                style={{
+                  padding: "5px 10px",
+                  background: "#334155",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                }}
+              >
+                Inicio
+              </button>
+            )}
+          </div>
           <span
             style={{
               fontSize: "0.85rem",
@@ -88,33 +153,6 @@ function App() {
           >
             {fechaFormateada}
           </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <span
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: "bold",
-              color: "#38bdf8",
-            }}
-          >
-            {horaFormateada}
-          </span>
-          {vistaActual !== "dashboard" && (
-            <button
-              onClick={handleVolver}
-              style={{
-                padding: "6px 12px",
-                background: "#334155",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              Inicio
-            </button>
-          )}
         </div>
       </header>
 

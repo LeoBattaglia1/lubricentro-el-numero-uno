@@ -262,8 +262,6 @@ export default function Servicios() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Gestión de Servicios</h1>
-
       {mensajeNotificacion && (
         <div style={styles.toastSuccess}>{mensajeNotificacion}</div>
       )}

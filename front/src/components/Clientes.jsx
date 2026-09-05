@@ -155,7 +155,8 @@ const styles = {
 
 const formatearFecha = (fechaStr) => {
   if (!fechaStr) return "Sin fecha";
-  const partes = fechaStr.split("T")[0].split("-");
+  const fechaLimpia = fechaStr.split("T")[0].split(" ")[0];
+  const partes = fechaLimpia.split("-");
   if (partes.length === 3) {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   }
@@ -654,8 +655,6 @@ export default function Clientes() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Gestión de Clientes y Vehículos</h1>
-
       {mensajeNotificacion && (
         <div style={styles.toastSuccess}>{mensajeNotificacion}</div>
       )}
@@ -1067,7 +1066,6 @@ export default function Clientes() {
                   </label>
                   <input
                     type="text"
-                    required
                     placeholder="Ej: 11 1234-5678"
                     style={{ ...styles.input, width: "100%" }}
                     value={formDataCliente.telefono}
@@ -1220,7 +1218,6 @@ export default function Clientes() {
                   </label>
                   <input
                     type="text"
-                    required
                     style={{ ...styles.input, width: "100%" }}
                     value={editClienteData.telefono}
                     onChange={(e) =>

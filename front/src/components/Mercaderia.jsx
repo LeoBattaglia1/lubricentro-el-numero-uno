@@ -191,8 +191,6 @@ const styles = {
     fontSize: "0.9rem",
     fontWeight: "500",
   },
-
-  // MENÚ DESPLEGABLE DE ESCASEZ (EN BOTÓN)
   dropdownEscasezMenu: {
     position: "absolute",
     top: "100%",
@@ -216,8 +214,6 @@ const styles = {
     backgroundColor: "#fffbeb",
     marginBottom: "10px",
   },
-
-  // MODALES
   modalOverlay: {
     position: "fixed",
     top: 0,
@@ -241,7 +237,6 @@ const styles = {
   },
 };
 
-// HELPER PARSE FECHA
 const formatearFecha = (fechaRaw) => {
   if (!fechaRaw) return "En Escasez";
   try {
@@ -257,7 +252,6 @@ const formatearFecha = (fechaRaw) => {
   }
 };
 
-// PETICIÓN SEGURA A ESCASEZ
 const fetchEscasezBD = async () => {
   const rutas = [
     "http://localhost:3000/api/escasezstock",
@@ -272,8 +266,8 @@ const fetchEscasezBD = async () => {
         const data = await res.json();
         return { data, rutaValida: url };
       }
-    } catch {
-      // Sigue intentando
+    } catch (error) {
+      console.warn(`No se pudo conectar a ${url}:`, error);
     }
   }
   return { data: [], rutaValida: rutas[0] };
@@ -305,17 +299,14 @@ export default function Mercaderia() {
     "http://localhost:3000/api/escasezstock",
   );
 
-  // Estados UI
   const [menuProveedorOpen, setMenuProveedorOpen] = useState(false);
   const [menuMercaderiaOpen, setMenuMercaderiaOpen] = useState(false);
   const [menuEscasezOpen, setMenuEscasezOpen] = useState(false);
   const [hoveredDropdownItem, setHoveredDropdownItem] = useState(null);
 
-  // Observaciones temporales
   const [observacionesLocal, setObservacionesLocal] = useState({});
   const [observacionesManuales, setObservacionesManuales] = useState({});
 
-  // Filtros y Ordenamiento (Mercadería)
   const [busqueda, setBusqueda] = useState("");
   const [ordenCampo, setOrdenCampo] = useState("nombre");
   const [ordenAsc, setOrdenAsc] = useState(true);
@@ -323,7 +314,6 @@ export default function Mercaderia() {
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
   const [vistaPanel, setVistaPanel] = useState({ tipo: null, data: null });
 
-  // Modales
   const [alertaModal, setAlertaModal] = useState({
     mostrar: false,
     mensaje: "",
@@ -335,20 +325,19 @@ export default function Mercaderia() {
     onConfirm: null,
   });
 
-  // Formularios Proveedor
   const [formProveedor, setFormProveedor] = useState({
     nombre: "",
     telefono: "",
   });
   const [proveedorAEditarId, setProveedorAEditarId] = useState("");
 
-  // Formularios Mercadería
   const [proveedorSeleccionadoId, setProveedorSeleccionadoId] = useState("");
   const [filasNuevasMercaderias, setFilasNuevasMercaderias] = useState([
     { nombre: "", precio: "" },
   ]);
 
-  // Autocompletado Mercadería
+  const [modoEdicionMercaderia, setModoEdicionMercaderia] = useState("");
+
   const [textoBusquedaEditar, setTextoBusquedaEditar] = useState("");
   const [mercaderiaAEditarId, setMercaderiaAEditarId] = useState("");
   const [formEditarMercaderia, setFormEditarMercaderia] = useState({
@@ -357,17 +346,18 @@ export default function Mercaderia() {
     provedor_id: "",
   });
 
+  const [proveedorEdicionMasivaId, setProveedorEdicionMasivaId] = useState("");
+  const [preciosEditadosMasivos, setPreciosEditadosMasivos] = useState({});
+
   const [textoBusquedaEliminar, setTextoBusquedaEliminar] = useState("");
   const [mercaderiaAEliminarId, setMercaderiaAEliminarId] = useState("");
 
   useEffect(() => {
     let isMounted = true;
-
     const cargarDatos = async () => {
       try {
         const { dataMercaderia, dataProveedores, dataEscasez, rutaValida } =
           await fetchDatosServidor();
-
         if (isMounted) {
           setMercaderia(dataMercaderia);
           setProveedores(dataProveedores);
@@ -378,15 +368,12 @@ export default function Mercaderia() {
         console.error("Error al cargar datos:", error);
       }
     };
-
     cargarDatos();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Extraer observaciones únicas
   const observacionesExistentes = useMemo(() => {
     const unicas = escasezStock
       .map((e) => e.observacion)
@@ -424,7 +411,6 @@ export default function Mercaderia() {
     return prov ? prov.nombre : "Sin Proveedor";
   };
 
-  // REGISTRAR ESCASEZ MEDIANTE EL CHECKBOX
   const handleMarcarEscasez = async (itemMercaderia) => {
     try {
       const payload = {
@@ -466,16 +452,13 @@ export default function Mercaderia() {
         await refrescarTodo();
         mostrarExito("⚠️ Producto registrado en Escasez de Stock.");
       } else {
-        mostrarAlerta(
-          "No se pudo guardar la escasez. Verifica que la ruta de la API exista.",
-        );
+        mostrarAlerta("No se pudo guardar la escasez.");
       }
     } catch (error) {
       console.error("Error al registrar escasez:", error);
     }
   };
 
-  // ELIMINAR DE ESCASEZ
   const handleEliminarEscasezDirecto = async (id) => {
     try {
       const res = await fetch(`${endpointEscasez}/${id}`, { method: "DELETE" });
@@ -485,11 +468,10 @@ export default function Mercaderia() {
         mostrarAlerta("No se pudo eliminar el registro de escasez.");
       }
     } catch (error) {
-      console.error("Error al eliminar registro de escasez:", error);
+      console.error("Error al eliminar escasez:", error);
     }
   };
 
-  // ACTUALIZAR OBSERVACIÓN
   const handleGuardarObservacion = async (escasezId, observacionOriginal) => {
     const escIdNum = Number(escasezId);
     const seleccion = observacionesLocal[escasezId];
@@ -519,7 +501,6 @@ export default function Mercaderia() {
     }
   };
 
-  // FILTROS Y ORDENAMIENTO
   const handleCambiarOrden = (campo) => {
     if (ordenCampo === campo) {
       setOrdenAsc(!ordenAsc);
@@ -556,7 +537,6 @@ export default function Mercaderia() {
       return 0;
     });
 
-  // PROVEEDORES
   const handleCrearProveedor = async (e) => {
     e.preventDefault();
     if (!formProveedor.nombre.trim()) return;
@@ -617,14 +597,13 @@ export default function Mercaderia() {
         mostrarExito("✅ Proveedor actualizado con éxito.");
       } else {
         const err = await res.json();
-        mostrarAlerta(`Error al editar: ${err.error || "Error al actualizar"}`);
+        mostrarAlerta(`Error al editar: ${err.error}`);
       }
     } catch (error) {
       console.error("Error al editar proveedor:", error);
     }
   };
 
-  // MERCADERÍA
   const handleAgregarFilaMercaderia = () => {
     setFilasNuevasMercaderias((prev) => [...prev, { nombre: "", precio: "" }]);
   };
@@ -677,6 +656,12 @@ export default function Mercaderia() {
     }
   };
 
+  const handleAplicarPorcentajeIndividual = (porcentaje) => {
+    const precioActual = Number(formEditarMercaderia.precio) || 0;
+    const nuevoPrecio = Math.round(precioActual * (1 + porcentaje / 100));
+    setFormEditarMercaderia((prev) => ({ ...prev, precio: nuevoPrecio }));
+  };
+
   const handleEditarMercaderia = async (e) => {
     e.preventDefault();
     if (!mercaderiaAEditarId || !formEditarMercaderia.nombre.trim()) return;
@@ -710,6 +695,69 @@ export default function Mercaderia() {
     } catch (error) {
       console.error("Error al editar mercadería:", error);
       mostrarAlerta("No es posible actualizar este producto");
+    }
+  };
+
+  const handleSeleccionarProveedorMasivo = (idProv) => {
+    setProveedorEdicionMasivaId(idProv);
+    const filtrados = mercaderia.filter(
+      (m) => String(m.provedor_id) === String(idProv),
+    );
+
+    const mapaPrecios = {};
+    filtrados.forEach((item) => {
+      mapaPrecios[item.id] = item.precio || 0;
+    });
+    setPreciosEditadosMasivos(mapaPrecios);
+  };
+
+  const handleAplicarPorcentajeMasivo = (porcentaje, idProducto = null) => {
+    setPreciosEditadosMasivos((prev) => {
+      const copia = { ...prev };
+      if (idProducto) {
+        const precioActual = Number(copia[idProducto]) || 0;
+        copia[idProducto] = Math.round(precioActual * (1 + porcentaje / 100));
+      } else {
+        Object.keys(copia).forEach((id) => {
+          const precioActual = Number(copia[id]) || 0;
+          copia[id] = Math.round(precioActual * (1 + porcentaje / 100));
+        });
+      }
+      return copia;
+    });
+  };
+
+  const handleGuardarPreciosPorProveedor = async (e) => {
+    e.preventDefault();
+    try {
+      const productosDelProveedor = mercaderia.filter(
+        (m) => String(m.provedor_id) === String(proveedorEdicionMasivaId),
+      );
+
+      const promesas = productosDelProveedor
+        .map((item) => {
+          const nuevoPrecio = Number(preciosEditadosMasivos[item.id]);
+          if (isNaN(nuevoPrecio)) return null;
+
+          return fetch(`http://localhost:3000/api/mercaderia/${item.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              nombre: item.nombre,
+              precio: nuevoPrecio,
+              provedor_id: item.provedor_id ? Number(item.provedor_id) : null,
+            }),
+          });
+        })
+        .filter(Boolean);
+
+      await Promise.all(promesas);
+      await refrescarTodo();
+      setVistaPanel({ tipo: null, data: null });
+      mostrarExito("✅ Precios actualizados correctamente por proveedor.");
+    } catch (error) {
+      console.error("Error al actualizar precios masivos:", error);
+      mostrarAlerta("No se pudieron actualizar algunos precios.");
     }
   };
 
@@ -777,8 +825,6 @@ export default function Mercaderia() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Gestión de Mercadería y Proveedores</h1>
-
       {mensajeNotificacion && (
         <div style={styles.toastSuccess}>{mensajeNotificacion}</div>
       )}
@@ -909,8 +955,11 @@ export default function Mercaderia() {
                   onMouseEnter={() => setHoveredDropdownItem("merc_edit")}
                   onMouseLeave={() => setHoveredDropdownItem(null)}
                   onClick={() => {
+                    setModoEdicionMercaderia("");
                     setTextoBusquedaEditar("");
                     setMercaderiaAEditarId("");
+                    setProveedorEdicionMasivaId("");
+                    setPreciosEditadosMasivos({});
                     setVistaPanel({ tipo: "editar_mercaderia", data: null });
                     setMenuMercaderiaOpen(false);
                   }}
@@ -1156,7 +1205,6 @@ export default function Mercaderia() {
                         ${Number(item.precio || 0).toLocaleString()}
                       </td>
 
-                      {/* COLUMNA ESCASEZ */}
                       <td style={{ ...styles.td, textAlign: "center" }}>
                         {registroEscasez ? (
                           <span
@@ -1431,94 +1479,206 @@ export default function Mercaderia() {
                 </div>
               )}
 
-              {/* MERCADERÍA: EDITAR */}
+              {/* MERCADERÍA: EDITAR (CON AMBOS BUSCADORES) */}
               {vistaPanel.tipo === "editar_mercaderia" && (
                 <div>
                   <h3 style={{ marginTop: 0 }}>Editar Mercadería</h3>
+
+                  {/* Selector del tipo de buscador dentro de editar */}
                   <div style={{ marginBottom: "16px" }}>
-                    <div style={styles.inputGroup}>
-                      <label style={{ display: "block", marginBottom: "4px" }}>
-                        Buscar Producto a Editar:
-                      </label>
-                      <input
-                        type="text"
-                        list="lista-mercaderia-editar"
-                        placeholder="Escribí para buscar..."
-                        style={styles.input}
-                        value={textoBusquedaEditar}
-                        onChange={(e) =>
-                          handleInputSeleccionarAEditar(e.target.value)
-                        }
-                      />
-                      <datalist id="lista-mercaderia-editar">
-                        {mercaderia.map((m) => (
-                          <option key={m.id} value={m.nombre} />
-                        ))}
-                      </datalist>
-                    </div>
+                    <label style={{ display: "block", marginBottom: "4px" }}>
+                      Modo de edición:
+                    </label>
+                    <select
+                      style={styles.select}
+                      value={modoEdicionMercaderia}
+                      onChange={(e) => {
+                        setModoEdicionMercaderia(e.target.value);
+                        setMercaderiaAEditarId("");
+                        setTextoBusquedaEditar("");
+                        setProveedorEdicionMasivaId("");
+                      }}
+                    >
+                      <option value="">
+                        -- Seleccionar forma de búsqueda --
+                      </option>
+                      <option value="producto">Buscar por Producto</option>
+                      <option value="proveedor">
+                        Buscar por Proveedor (Precios)
+                      </option>
+                    </select>
                   </div>
 
-                  {mercaderiaAEditarId && (
-                    <form onSubmit={handleEditarMercaderia}>
-                      <div style={{ marginBottom: "12px" }}>
-                        <label
-                          style={{ display: "block", marginBottom: "4px" }}
-                        >
-                          Nombre del Producto:
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          style={styles.input}
-                          value={formEditarMercaderia.nombre}
-                          onChange={(e) =>
-                            setFormEditarMercaderia({
-                              ...formEditarMercaderia,
-                              nombre: e.target.value,
-                            })
-                          }
-                        />
+                  {/* 1. BUSCADOR POR PRODUCTO */}
+                  {modoEdicionMercaderia === "producto" && (
+                    <div>
+                      <div style={{ marginBottom: "16px" }}>
+                        <div style={styles.inputGroup}>
+                          <label
+                            style={{ display: "block", marginBottom: "4px" }}
+                          >
+                            Buscar Producto a Editar:
+                          </label>
+                          <input
+                            type="text"
+                            list="lista-mercaderia-editar"
+                            placeholder="Escribí para buscar..."
+                            style={styles.input}
+                            value={textoBusquedaEditar}
+                            onChange={(e) =>
+                              handleInputSeleccionarAEditar(e.target.value)
+                            }
+                          />
+                          <datalist id="lista-mercaderia-editar">
+                            {mercaderia.map((m) => (
+                              <option key={m.id} value={m.nombre} />
+                            ))}
+                          </datalist>
+                        </div>
                       </div>
 
-                      <div style={{ marginBottom: "12px" }}>
-                        <label
-                          style={{ display: "block", marginBottom: "4px" }}
-                        >
-                          Precio:
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          style={styles.input}
-                          value={formEditarMercaderia.precio}
-                          onChange={(e) =>
-                            setFormEditarMercaderia({
-                              ...formEditarMercaderia,
-                              precio: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
+                      {mercaderiaAEditarId && (
+                        <form onSubmit={handleEditarMercaderia}>
+                          <div style={{ marginBottom: "12px" }}>
+                            <label
+                              style={{ display: "block", marginBottom: "4px" }}
+                            >
+                              Nombre del Producto:
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              style={styles.input}
+                              value={formEditarMercaderia.nombre}
+                              onChange={(e) =>
+                                setFormEditarMercaderia({
+                                  ...formEditarMercaderia,
+                                  nombre: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
 
+                          <div style={{ marginBottom: "12px" }}>
+                            <label
+                              style={{ display: "block", marginBottom: "4px" }}
+                            >
+                              Precio:
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              style={styles.input}
+                              value={formEditarMercaderia.precio}
+                              onChange={(e) =>
+                                setFormEditarMercaderia({
+                                  ...formEditarMercaderia,
+                                  precio: e.target.value,
+                                })
+                              }
+                            />
+                            {/* Botones de porcentaje individuales */}
+                            <div style={{ marginTop: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color: "#64748b",
+                                  display: "block",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                Aumentar precio:
+                              </span>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: "4px",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {[5, 10, 15, 20, 25].map((porc) => (
+                                  <button
+                                    key={porc}
+                                    type="button"
+                                    onClick={() =>
+                                      handleAplicarPorcentajeIndividual(porc)
+                                    }
+                                    style={{
+                                      ...styles.btnSecondary,
+                                      padding: "2px 6px",
+                                      fontSize: "0.75rem",
+                                    }}
+                                  >
+                                    +{porc}%
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: "16px" }}>
+                            <label
+                              style={{ display: "block", marginBottom: "4px" }}
+                            >
+                              Proveedor:
+                            </label>
+                            <select
+                              style={styles.select}
+                              value={formEditarMercaderia.provedor_id}
+                              onChange={(e) =>
+                                setFormEditarMercaderia({
+                                  ...formEditarMercaderia,
+                                  provedor_id: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">
+                                -- Sin Proveedor / Ninguno --
+                              </option>
+                              {proveedores.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "10px" }}>
+                            <button type="submit" style={styles.btnPrimary}>
+                              Guardar Cambios
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVistaPanel({ tipo: null, data: null })
+                              }
+                              style={styles.btnSecondary}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 2. BUSCADOR POR PROVEEDOR */}
+                  {modoEdicionMercaderia === "proveedor" && (
+                    <div>
                       <div style={{ marginBottom: "16px" }}>
                         <label
                           style={{ display: "block", marginBottom: "4px" }}
                         >
-                          Proveedor:
+                          Seleccionar Proveedor:
                         </label>
                         <select
                           style={styles.select}
-                          value={formEditarMercaderia.provedor_id}
+                          value={proveedorEdicionMasivaId}
                           onChange={(e) =>
-                            setFormEditarMercaderia({
-                              ...formEditarMercaderia,
-                              provedor_id: e.target.value,
-                            })
+                            handleSeleccionarProveedorMasivo(e.target.value)
                           }
                         >
-                          <option value="">
-                            -- Sin Proveedor / Ninguno --
-                          </option>
+                          <option value="">-- Seleccionar Proveedor --</option>
                           {proveedores.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.nombre}
@@ -1527,21 +1687,152 @@ export default function Mercaderia() {
                         </select>
                       </div>
 
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button type="submit" style={styles.btnPrimary}>
-                          Guardar Cambios
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVistaPanel({ tipo: null, data: null })
-                          }
-                          style={styles.btnSecondary}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </form>
+                      {proveedorEdicionMasivaId && (
+                        <form onSubmit={handleGuardarPreciosPorProveedor}>
+                          <div style={{ marginBottom: "12px" }}>
+                            <label
+                              style={{
+                                display: "block",
+                                marginBottom: "6px",
+                                fontSize: "0.85rem",
+                                color: "#64748b",
+                              }}
+                            >
+                              Aumentar todos:
+                            </label>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "6px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {[5, 10, 15, 20, 25].map((porc) => (
+                                <button
+                                  key={porc}
+                                  type="button"
+                                  onClick={() =>
+                                    handleAplicarPorcentajeMasivo(porc)
+                                  }
+                                  style={{
+                                    ...styles.btnSecondary,
+                                    padding: "4px 8px",
+                                    fontSize: "0.85rem",
+                                  }}
+                                >
+                                  +{porc}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              maxHeight: "220px",
+                              overflowY: "auto",
+                              marginBottom: "16px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            {mercaderia
+                              .filter(
+                                (m) =>
+                                  String(m.provedor_id) ===
+                                  String(proveedorEdicionMasivaId),
+                              )
+                              .map((item) => (
+                                <div
+                                  key={item.id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    background: "#f8fafc",
+                                    padding: "8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #e2e8f0",
+                                    gap: "8px",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: "0.9rem",
+                                      fontWeight: "500",
+                                      flex: 1,
+                                    }}
+                                  >
+                                    {item.nombre}
+                                  </span>
+
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    <input
+                                      type="number"
+                                      value={
+                                        preciosEditadosMasivos[item.id] !==
+                                        undefined
+                                          ? preciosEditadosMasivos[item.id]
+                                          : ""
+                                      }
+                                      onChange={(e) =>
+                                        setPreciosEditadosMasivos({
+                                          ...preciosEditadosMasivos,
+                                          [item.id]: e.target.value,
+                                        })
+                                      }
+                                      style={{
+                                        ...styles.input,
+                                        width: "90px",
+                                        padding: "4px 8px",
+                                      }}
+                                    />
+
+                                    <button
+                                      type="button"
+                                      title="Aumentar 10% a este producto"
+                                      onClick={() =>
+                                        handleAplicarPorcentajeMasivo(
+                                          10,
+                                          item.id,
+                                        )
+                                      }
+                                      style={{
+                                        ...styles.btnSecondary,
+                                        padding: "4px 6px",
+                                        fontSize: "0.75rem",
+                                      }}
+                                    >
+                                      +10%
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+
+                          <div style={{ display: "flex", gap: "10px" }}>
+                            <button type="submit" style={styles.btnPrimary}>
+                              Guardar Precios Masivos
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVistaPanel({ tipo: null, data: null })
+                              }
+                              style={styles.btnSecondary}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

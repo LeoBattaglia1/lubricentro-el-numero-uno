@@ -1,6 +1,10 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
+import cron from "node-cron";
+import { generarRespaldoSQL } from "./src/services/backupService.js";
 
 // Importación de rutas
 import provedoresRoutes from "./src/routes/provedoresRoutes.js";
@@ -17,6 +21,7 @@ import pagosRouter from "./src/routes/pagosRouter.js";
 import clienteAutoRouter from "./src/routes/clienteAutoRouter.js";
 import pagosProvedorRouter from "./src/routes/pagosProvedorRoutes.js";
 import trabajosRouter from "./src/routes/trabajosRouter.js";
+import backupRoutes from "./src/routes/backupRoutes.js";
 
 dotenv.config();
 
@@ -41,6 +46,7 @@ app.use("/api/pagos", pagosRouter);
 app.use("/api/cliente-auto", clienteAutoRouter);
 app.use("/api/pagosprovedor", pagosProvedorRouter);
 app.use("/api/trabajos-realizados", trabajosRouter);
+app.use("/api/backup", backupRoutes);
 
 // Endpoint de verificación del estado del servidor
 app.get("/api/health", (req, res) => {
@@ -48,6 +54,31 @@ app.get("/api/health", (req, res) => {
     status: "ok",
     message: "API Lubricentro El Número Uno operativa",
   });
+});
+
+// RESPALDO AUTOMÁTICO PROGRAMADO (Todos los días a las 11:30 y 20:00 hs)
+cron.schedule("45 11,20 * * *", async () => {
+  const letraPendrive = "E:/ResguardosTaller"; // Ajusta la letra si difiere en otra PC
+
+  if (!fs.existsSync(letraPendrive)) {
+    return; // Sale silenciosamente si no está conectado el pendrive
+  }
+
+  try {
+    const rutaDestino = path.join(letraPendrive, "respaldo_taller.sql");
+
+    const resultado = await generarRespaldoSQL(rutaDestino);
+    if (resultado.success) {
+      console.log(
+        "✅ Respaldo automático programado guardado con éxito en el pendrive.",
+      );
+    }
+  } catch (error) {
+    console.error(
+      "❌ Error al generar el respaldo automático programado:",
+      error,
+    );
+  }
 });
 
 app.listen(PORT, () => {

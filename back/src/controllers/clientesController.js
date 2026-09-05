@@ -60,14 +60,13 @@ export const asociarAutoACliente = async (req, res) => {
   }
 };
 
-// NUEVA FUNCIÓN: Obtener deudas, historial y catálogos de un cliente paso a paso
+// OBTENER DEUDAS, HISTORIAL Y CATÁLOGOS COINCIDIENDO FECHA Y HORA EXACTA
 export const getDeudaClienteDetalle = async (req, res) => {
-  const { id } = req.params; // id del cliente
+  const { id } = req.params;
 
   try {
-    // PASO 1: Buscar registros en la tabla pagos con ese id_cliente y tipo_pago pendiente
     const [pagosPendientes] = await db.query(
-      "SELECT * FROM pagos WHERE cliente_id = ? AND (tipo_pago = 'pendiente' OR tipo_pago = 'Pendiente')",
+      "SELECT * FROM pagos WHERE cliente_id = ? AND (tipo_pago = 'pendiente' OR tipo_pago = 'Pendiente' OR tipo_pago IS NULL OR tipo_pago = '')",
       [id],
     );
 
@@ -75,7 +74,6 @@ export const getDeudaClienteDetalle = async (req, res) => {
       return res.json({ deudaTotal: 0, pagosPendientes: [] });
     }
 
-    // Obtener los autos vinculados al cliente por si el historial está asociado al auto_id
     const [autosCliente] = await db.query(
       "SELECT auto_id FROM cliente_auto WHERE cliente_id = ?",
       [id],
@@ -86,35 +84,39 @@ export const getDeudaClienteDetalle = async (req, res) => {
     const pagosConDetalle = [];
 
     for (const pago of pagosPendientes) {
-      // Tomar la fecha del registro pendiente (formato YYYY-MM-DD)
-      let fechaPago = null;
-      if (pago.fecha) {
-        if (typeof pago.fecha === "string") {
-          fechaPago = pago.fecha.split("T")[0];
-        } else if (pago.fecha instanceof Date) {
-          fechaPago = pago.fecha.toISOString().split("T")[0];
-        }
-      }
+      const fechaHoraPago = pago.fecha;
 
       let serviciosHistorial = [];
       let mercaderiaHistorial = [];
 
-      if (fechaPago) {
-        // PASO 2: Ir a las tablas de historial con el cliente_id / auto_id y la fecha
-        const [sRows] = await db.query(
-          `SELECT * FROM historial_servicios WHERE (cliente_id = ? ${autoIds.length ? "OR auto_id IN (?)" : ""}) AND DATE(fecha) = ?`,
-          autoIds.length ? [id, autoIds, fechaPago] : [id, fechaPago],
-        );
-        serviciosHistorial = sRows;
+      if (fechaHoraPago) {
+        if (autoIds.length > 0) {
+          const [sRows] = await db.query(
+            `SELECT * FROM historial_servicios WHERE (cliente_id = ? OR auto_id IN (?)) AND fecha = ?`,
+            [id, autoIds, fechaHoraPago],
+          );
+          serviciosHistorial = sRows;
 
-        const [mRows] = await db.query(
-          `SELECT * FROM historial_mercaderia WHERE (cliente_id = ? ${autoIds.length ? "OR auto_id IN (?)" : ""}) AND DATE(fecha) = ?`,
-          autoIds.length ? [id, autoIds, fechaPago] : [id, fechaPago],
-        );
-        mercaderiaHistorial = mRows;
+          const [mRows] = await db.query(
+            `SELECT * FROM historial_mercaderia WHERE (cliente_id = ? OR auto_id IN (?)) AND fecha = ?`,
+            [id, autoIds, fechaHoraPago],
+          );
+          mercaderiaHistorial = mRows;
+        } else {
+          const [sRows] = await db.query(
+            `SELECT * FROM historial_servicios WHERE cliente_id = ? AND fecha = ?`,
+            [id, fechaHoraPago],
+          );
+          serviciosHistorial = sRows;
+
+          const [mRows] = await db.query(
+            `SELECT * FROM historial_mercaderia WHERE cliente_id = ? AND fecha = ?`,
+            [id, fechaHoraPago],
+          );
+          mercaderiaHistorial = mRows;
+        }
       }
 
-      // PASO 3: Con los IDs de servicios y mercadería, ir a sus tablas para obtener nombres y precios
       let subtotalServiciosYItems = 0;
       const serviciosNombres = [];
       const mercaderiaDetalle = [];

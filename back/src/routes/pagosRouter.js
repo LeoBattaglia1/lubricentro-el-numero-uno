@@ -1,19 +1,26 @@
 import { Router } from "express";
 import {
   getPagos,
-  getProveedores,
-  getPagosProveedor,
+  createPago,
   updatePago,
+  getPagosProveedores,
   createPagoProveedor,
+  getVentas,
+  registrarVentaDiaria,
+  getDeudaClienteDetalle,
 } from "../controllers/pagosController.js";
 
 const router = Router();
 
-// Rutas de pagos y proveedores
 router.get("/", getPagos);
-router.put("/:id", updatePago);
-router.get("/provedores", getProveedores);
-router.get("/pagosprovedor", getPagosProveedor);
+router.post("/", createPago);
+router.put("/:id", updatePago); // <- Esencial para que Caja.jsx pueda actualizar el pago pendiente
+router.get("/clientes/:id/deuda-detalle", getDeudaClienteDetalle);
+
+router.get("/pagosprovedor", getPagosProveedores);
 router.post("/pagosprovedor", createPagoProveedor);
+
+router.get("/ventas", getVentas);
+router.post("/ventas", registrarVentaDiaria);
 
 export default router;

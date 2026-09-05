@@ -276,6 +276,44 @@ const styles = {
     color: "#fff",
     fontWeight: "500",
   },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    padding: "24px",
+    borderRadius: "8px",
+    maxWidth: "400px",
+    width: "90%",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+    textAlign: "center",
+  },
+  modalTitle: {
+    fontSize: "1.25rem",
+    color: "#1e293b",
+    marginBottom: "8px",
+    marginTop: 0,
+    fontWeight: "bold",
+  },
+  modalText: {
+    fontSize: "0.95rem",
+    color: "#64748b",
+    marginBottom: "20px",
+  },
+  modalActions: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
+  },
 };
 
 const ENDPOINT_TURNOS = "http://localhost:3000/api/turnos";
@@ -315,6 +353,9 @@ export default function Turnos() {
     useState(false);
   const [menuServiciosEditAbierto, setMenuServiciosEditAbierto] =
     useState(null);
+
+  // Estado para el modal personalizado de eliminación
+  const [turnoAEliminar, setTurnoAEliminar] = useState(null);
 
   // Formulario de alta
   const [nuevoFecha, setNuevoFecha] = useState("");
@@ -538,16 +579,24 @@ export default function Turnos() {
     }
   };
 
-  const handleEliminarTurno = async (id) => {
-    if (!window.confirm("¿Estás seguro de eliminar este turno?")) return;
+  const confirmarEliminarTurno = (id) => {
+    setTurnoAEliminar(id);
+  };
+
+  const ejecutarEliminarTurno = async () => {
+    if (!turnoAEliminar) return;
     try {
-      const res = await fetch(`${ENDPOINT_TURNOS}/${id}`, { method: "DELETE" });
+      const res = await fetch(`${ENDPOINT_TURNOS}/${turnoAEliminar}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         await recargarTurnos();
         mostrarExito("Turno eliminado con éxito.");
       }
     } catch (error) {
       console.error("Error al eliminar turno:", error);
+    } finally {
+      setTurnoAEliminar(null);
     }
   };
 
@@ -660,7 +709,6 @@ export default function Turnos() {
         const normalizado = t.fecha_hora.replace("T", " ");
         const fechaTurnoStr = normalizado.split(" ")[0];
 
-        // Filtramos para que no muestre turnos de días anteriores (comparación directa de strings YYYY-MM-DD)
         if (fechaTurnoStr < hoyIsoStr) return false;
 
         const textoBusqueda = busqueda.toLowerCase().trim();
@@ -782,7 +830,6 @@ export default function Turnos() {
   return (
     <div style={styles.container}>
       <div style={styles.headerContainer}>
-        <h1 style={styles.header}>Gestión de Turnos</h1>
         <div style={styles.viewToggle}>
           <button
             type="button"
@@ -1188,7 +1235,7 @@ export default function Turnos() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleEliminarTurno(item.id)}
+                              onClick={() => confirmarEliminarTurno(item.id)}
                               style={{
                                 ...styles.btnDanger,
                                 height: "32px",
@@ -1343,6 +1390,35 @@ export default function Turnos() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+      {turnoAEliminar && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <h3 style={styles.modalTitle}>¿Eliminar turno?</h3>
+            <p style={styles.modalText}>
+              Esta acción no se puede deshacer y borrará el turno seleccionado
+              del sistema.
+            </p>
+            <div style={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => setTurnoAEliminar(null)}
+                style={{ ...styles.btnSecondary, height: "38px" }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={ejecutarEliminarTurno}
+                style={{ ...styles.btnDanger, height: "38px" }}
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

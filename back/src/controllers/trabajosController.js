@@ -113,7 +113,7 @@ export const registrarTrabajoCompleto = async (req, res) => {
         : Number(total_final) || 0;
 
     const [pagoResult] = await connection.query(
-      `INSERT INTO pagos (cliente_id, montoExtra, montoTotal, tipo_pago, fecha) VALUES (?, ?, ?, ?, CURDATE())`,
+      `INSERT INTO pagos (cliente_id, montoExtra, montoTotal, tipo_pago, fecha) VALUES (?, ?, ?, ?, NOW())`,
       [clienteIdPago, montoExtraPago, montoTotalPago, formaPagoFinal],
     );
 

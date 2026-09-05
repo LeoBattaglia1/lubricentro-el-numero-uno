@@ -9,7 +9,7 @@ const Dashboard = ({ onNavigate }) => {
   const [turnosDelDia, setTurnosDelDia] = useState([]);
   const [productosStockBajo, setProductosStockBajo] = useState([]);
 
-  // Cargar turnos de hoy desde la BD y escasez de stock
+  // Cargar turnos de hoy con fecha local correcta y escasez de stock
   useEffect(() => {
     const cargarDatosDashboard = async () => {
       try {
@@ -20,7 +20,13 @@ const Dashboard = ({ onNavigate }) => {
 
         if (resTurnos.ok) {
           const todosLosTurnos = await resTurnos.json();
-          const hoyStr = new Date().toISOString().split("T")[0];
+
+          // Obtener fecha actual local exacta (YYYY-MM-DD) para evitar desfase UTC
+          const hoy = new Date();
+          const anio = hoy.getFullYear();
+          const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+          const dia = String(hoy.getDate()).padStart(2, "0");
+          const hoyStr = `${anio}-${mes}-${dia}`;
 
           const filtrados = todosLosTurnos.filter((t) => {
             if (!t.fecha_hora) return false;
@@ -69,7 +75,7 @@ const Dashboard = ({ onNavigate }) => {
     },
     {
       id: "trabajo_realizado",
-      titulo: "Trabajo Realizado",
+      titulo: "Trabajo Realizado o venta",
       icono: "📋",
       color: "#e65100",
       descripcion:
@@ -235,7 +241,55 @@ const Dashboard = ({ onNavigate }) => {
         ))}
       </div>
 
-      {/* VENTANA FLOTANTE DE TURNOS DE HOY (Desde la BD) */}
+      {/* BOTÓN FLOTANTE DE RESPALDO MANUAL (Inferior derecha) */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: mostrarModalTurnos ? "10px" : "20px",
+          right: "500px",
+          zIndex: 999,
+          transition: "bottom 0.3s ease",
+        }}
+      >
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch(
+                "http://localhost:3000/api/backup/guardar-pendrive",
+              );
+              const data = await res.json();
+              if (data.success) {
+                alert("💾 ¡Respaldo guardado exitosamente en el pendrive!");
+              } else {
+                alert("⚠️ " + data.error);
+              }
+            } catch {
+              alert(
+                "❌ No se pudo conectar con el servidor para hacer el respaldo.",
+              );
+            }
+          }}
+          style={{
+            background: "#0284c7",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontWeight: "bold",
+            fontSize: "0.85rem",
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+          title="Guardar copia de seguridad directamente en el pendrive"
+        >
+          💾 Guardar en Pendrive
+        </button>
+      </div>
+
+      {/* VENTANA FLOTANTE DE TURNOS DE HOY */}
       {mostrarModalTurnos && (
         <div
           style={{
