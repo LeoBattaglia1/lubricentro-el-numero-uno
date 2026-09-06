@@ -1,12 +1,12 @@
 import db from "../config/db.js";
 
-// PAGOS DE CLIENTES
+// PAGOS DE CLIENTES (Corregido con LEFT JOIN para incluir registros con cliente_id NULL)
 export const getPagos = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT p.*, c.nombre AS cliente_nombre 
+      SELECT p.*, COALESCE(c.nombre, 'Sin Cliente / Vario') AS cliente_nombre 
       FROM pagos p 
-      JOIN clientes c ON p.cliente_id = c.id 
+      LEFT JOIN clientes c ON p.cliente_id = c.id 
       ORDER BY p.fecha DESC
     `);
     res.json(rows);
@@ -20,7 +20,7 @@ export const createPago = async (req, res) => {
   try {
     const [result] = await db.query(
       "INSERT INTO pagos (cliente_id, historial_servicio_id, monto, tipo_pago) VALUES (?, ?, ?, ?)",
-      [cliente_id, historial_servicio_id, monto, tipo_pago],
+      [cliente_id || null, historial_servicio_id || null, monto, tipo_pago],
     );
     res.status(201).json({ id: result.insertId, monto, tipo_pago });
   } catch (error) {
@@ -28,7 +28,7 @@ export const createPago = async (req, res) => {
   }
 };
 
-// ACTUALIZAR / COBRAR PAGO (Conectado con handleEjecutarCobro de Caja.jsx)
+// ACTUALIZAR / COBRAR PAGO
 export const updatePago = async (req, res) => {
   const { id } = req.params;
   const { tipo_pago, fecha, montoTotal, montoExtra } = req.body;

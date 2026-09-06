@@ -274,8 +274,15 @@ export default function Caja() {
       }
     };
     fetchData();
+
+    const handleFocus = () => {
+      fetchData();
+    };
+    window.addEventListener("focus", handleFocus);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
@@ -361,8 +368,7 @@ export default function Caja() {
       if (p.tipo_pago === "pendiente") return;
       if (!p.fecha) return;
 
-      const fechaBruta = String(p.fecha).split("T")[0];
-      const fechaKey = fechaBruta.split(" ")[0];
+      const fechaKey = String(p.fecha).substring(0, 10);
       const partes = fechaKey.split("-");
       if (partes.length !== 3) return;
 
@@ -384,8 +390,8 @@ export default function Caja() {
 
     pagosProveedor.forEach((pp) => {
       if (!pp.fecha) return;
-      const fechaBruta = String(pp.fecha).split("T")[0];
-      const fechaKey = fechaBruta.split(" ")[0];
+
+      const fechaKey = String(pp.fecha).substring(0, 10);
       const partes = fechaKey.split("-");
       if (partes.length !== 3) return;
 

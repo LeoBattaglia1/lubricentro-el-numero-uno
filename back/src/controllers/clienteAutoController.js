@@ -28,3 +28,45 @@ export const crearClienteAuto = async (req, res) => {
     res.status(500).json({ mensaje: "Error al guardar la relación" });
   }
 };
+
+// Eliminar (desvincular) una relación cliente-auto validando pagos pendientes con tipo_pago
+export const eliminarClienteAuto = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Obtener la relación para identificar al cliente asociado
+    const [relacionRows] = await db.query(
+      "SELECT * FROM cliente_auto WHERE id = ?",
+      [id],
+    );
+
+    if (relacionRows.length === 0) {
+      return res.status(404).json({ mensaje: "Relación no encontrada" });
+    }
+
+    const { cliente_id } = relacionRows[0];
+
+    // 2. Verificar si el cliente tiene pagos pendientes usando tipo_pago
+    const [pagosPendientes] = await db.query(
+      "SELECT * FROM pagos WHERE cliente_id = ? AND (tipo_pago = 'pendiente' OR tipo_pago = 'Pendiente' OR tipo_pago IS NULL OR tipo_pago = '')",
+      [cliente_id],
+    );
+
+    if (pagosPendientes.length > 0) {
+      return res.status(400).json({
+        mensaje:
+          "No se puede desvincular el vehículo porque el cliente registra pagos pendientes.",
+      });
+    }
+
+    // 3. Proceder con la desvinculación si no existen deudas
+    await db.query("DELETE FROM cliente_auto WHERE id = ?", [id]);
+
+    res.json({ mensaje: "Vehículo desvinculado correctamente del cliente" });
+  } catch (error) {
+    console.error("Error al desvincular cliente-auto:", error);
+    res
+      .status(500)
+      .json({ mensaje: "Error al intentar desvincular el vehículo" });
+  }
+};

@@ -38,20 +38,6 @@ export const crearTurno = async (req, res) => {
       observaciones,
     } = req.body;
 
-    console.log("🔍 [crearTurno] fecha_hora original del cliente:", fecha_hora);
-
-    if (fecha_hora) {
-      const limpio = fecha_hora.replace("Z", "").replace("T", " ");
-      const [fechaPart, horaPart] = limpio.split(" ");
-      const horaFinal = horaPart ? horaPart.slice(0, 8) : "00:00:00";
-      fecha_hora = `${fechaPart} ${horaFinal}`;
-    }
-
-    console.log(
-      "💾 [crearTurno] fecha_hora final a insertar en BD:",
-      fecha_hora,
-    );
-
     const [resultado] = await db.query(
       `INSERT INTO turnos (fecha_hora, cliente_id, auto_id, cliente_nombre, vehiculo_contacto, observaciones) 
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -79,17 +65,6 @@ export const crearTurno = async (req, res) => {
 export const actualizarTurno = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`📥 [actualizarTurno ID: ${id}] req.body recibido:`, req.body);
-    let {
-      fecha_hora,
-      cliente_id,
-      auto_id,
-      cliente_nombre,
-      vehiculo_contacto,
-      observaciones,
-    } = req.body;
-
-    console.log("🔍 [actualizarTurno] fecha_hora original:", fecha_hora);
 
     if (fecha_hora) {
       const limpio = fecha_hora.replace("Z", "").replace("T", " ");
@@ -97,11 +72,6 @@ export const actualizarTurno = async (req, res) => {
       const horaFinal = horaPart ? horaPart.slice(0, 8) : "00:00:00";
       fecha_hora = `${fechaPart} ${horaFinal}`;
     }
-
-    console.log(
-      "💾 [actualizarTurno] fecha_hora final a actualizar en BD:",
-      fecha_hora,
-    );
 
     await db.query(
       `UPDATE turnos SET fecha_hora = ?, cliente_id = ?, auto_id = ?, cliente_nombre = ?, vehiculo_contacto = ?, observaciones = ? 

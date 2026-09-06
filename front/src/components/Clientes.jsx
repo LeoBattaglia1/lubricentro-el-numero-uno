@@ -27,6 +27,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: "24px",
+    alignItems: "start",
   },
   cardLeft: {
     backgroundColor: "#ffffff",
@@ -41,6 +42,8 @@ const styles = {
     borderRadius: "8px",
     padding: "20px",
     minHeight: "400px",
+    position: "sticky",
+    top: "24px",
   },
   table: {
     width: "100%",
@@ -151,6 +154,37 @@ const styles = {
     fontSize: "0.9rem",
     fontWeight: "500",
   },
+  toastError: {
+    backgroundColor: "#fef2f2",
+    color: "#991b1b",
+    border: "1px solid #fecaca",
+    padding: "10px 14px",
+    borderRadius: "6px",
+    marginBottom: "16px",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    padding: "24px",
+    borderRadius: "8px",
+    maxWidth: "400px",
+    width: "100%",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+    textAlign: "center",
+  },
 };
 
 const formatearFecha = (fechaStr) => {
@@ -202,6 +236,7 @@ export default function Clientes() {
 
   const [busqueda, setBusqueda] = useState("");
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
+  const [mensajeError, setMensajeError] = useState("");
 
   const [vistaPanel, setVistaPanel] = useState({ tipo: null, data: null });
   const [deudaCliente, setDeudaCliente] = useState(0);
@@ -233,7 +268,10 @@ export default function Clientes() {
     patente: "",
   });
   const [mostrarFormNuevoAuto, setMostrarFormNuevoAuto] = useState(false);
-  const [autoAEliminar, setAutoAEliminar] = useState(null);
+  const [autoADesvincular, setAutoADesvincular] = useState(null);
+
+  // Estado para controlar el modal de bloqueo por deuda
+  const [mostrarModalDeuda, setMostrarModalDeuda] = useState(false);
 
   useEffect(() => {
     async function cargar() {
@@ -272,6 +310,7 @@ export default function Clientes() {
   }
 
   const mostrarExito = (mensaje) => {
+    setMensajeError("");
     setMensajeNotificacion(mensaje);
     setTimeout(() => {
       setMensajeNotificacion("");
@@ -520,7 +559,7 @@ export default function Clientes() {
     }
   };
 
-  const handleAbrirEdicionCliente = (cliente) => {
+  const handleAbrirEdicionCliente = async (cliente) => {
     setEditClienteData({
       id: cliente.id,
       nombre: cliente.nombre,
@@ -530,6 +569,21 @@ export default function Clientes() {
     setMostrarFormNuevoAuto(false);
     setNuevoAutoData({ marca_modelo: "", patente: "" });
     setVistaPanel({ tipo: "editar_cliente", data: cliente });
+
+    // Consultamos la deuda actualizada del cliente para asegurar el bloqueo correcto en el modal
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/clientes/${cliente.id}/deuda-detalle`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setDeudaCliente(data.deudaTotal);
+      } else {
+        setDeudaCliente(0);
+      }
+    } catch {
+      setDeudaCliente(0);
+    }
   };
 
   const handleVincularAutoHuerfanoAEdit = async (autoId) => {
@@ -629,27 +683,47 @@ export default function Clientes() {
     }
   };
 
-  const handleConfirmarEliminarAuto = async () => {
-    if (!autoAEliminar) return;
+  // Manejador que evalúa si el cliente tiene deuda antes de permitir la desvinculación
+  const handleIntentarDesvincular = (auto) => {
+    if (deudaCliente > 0) {
+      setMostrarModalDeuda(true); // Muestra el modal de alerta si hay deuda
+    } else {
+      setAutoADesvincular(auto); // Si no hay deuda, abre el flujo normal de confirmación
+    }
+  };
+
+  const handleConfirmarDesvincularAuto = async () => {
+    if (!autoADesvincular) return;
 
     try {
-      const res = await fetch(
-        `http://localhost:3000/api/autos/${autoAEliminar.id}`,
-        {
-          method: "DELETE",
-        },
+      const relacion = clienteAuto.find(
+        (ca) =>
+          ca.cliente_id === editClienteData.id &&
+          ca.auto_id === autoADesvincular.id,
       );
 
-      if (res.ok) {
-        setEditAutosCliente((prev) =>
-          prev.filter((a) => a.id !== autoAEliminar.id),
+      if (relacion) {
+        const res = await fetch(
+          `http://localhost:3000/api/cliente-auto/${relacion.id}`,
+          {
+            method: "DELETE",
+          },
         );
-        await recargarDatos();
+
+        if (res.ok) {
+          setEditAutosCliente((prev) =>
+            prev.filter((a) => a.id !== autoADesvincular.id),
+          );
+          await recargarDatos();
+          mostrarExito("✅ Vehículo desvinculado correctamente del cliente.");
+        } else {
+          setMostrarModalDeuda(true);
+        }
       }
     } catch (error) {
-      console.error("Error al eliminar auto:", error);
+      console.error("Error al desvincular auto:", error);
     } finally {
-      setAutoAEliminar(null);
+      setAutoADesvincular(null);
     }
   };
 
@@ -657,6 +731,46 @@ export default function Clientes() {
     <div style={styles.container}>
       {mensajeNotificacion && (
         <div style={styles.toastSuccess}>{mensajeNotificacion}</div>
+      )}
+      {mensajeError && <div style={styles.toastError}>{mensajeError}</div>}
+
+      {/* Modal de Alerta por Deuda Pendiente */}
+      {mostrarModalDeuda && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <h3 style={{ color: "#991b1b", marginTop: 0 }}>
+              ⚠️ Acción Bloqueada
+            </h3>
+            <p
+              style={{
+                color: "#4a5568",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
+              }}
+            >
+              No se puede desvincular un vehículo de su dueño hasta que no abone
+              su deuda pendiente.
+            </p>
+            <button
+              onClick={() => {
+                setMostrarModalDeuda(false);
+                setAutoADesvincular(null);
+              }}
+              style={{
+                marginTop: "16px",
+                padding: "8px 16px",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       )}
 
       <div style={styles.searchBarContainer}>
@@ -1259,10 +1373,15 @@ export default function Clientes() {
                         />
                         <button
                           type="button"
-                          onClick={() => setAutoAEliminar(auto)}
-                          style={styles.btnDanger}
+                          onClick={() => handleIntentarDesvincular(auto)}
+                          style={{
+                            ...styles.btnSecondary,
+                            backgroundColor: "#d97706",
+                            padding: "8px 12px",
+                            fontSize: "0.85rem",
+                          }}
                         >
-                          🗑️
+                          🔗 Desvincular
                         </button>
                       </div>
                     </div>
@@ -1273,36 +1392,40 @@ export default function Clientes() {
                   </p>
                 )}
 
-                {autoAEliminar && (
+                {autoADesvincular && !mostrarModalDeuda && (
                   <div
                     style={{
                       ...styles.autoCardEdit,
-                      backgroundColor: "#fef2f2",
-                      borderColor: "#fecaca",
+                      backgroundColor: "#fffbeb",
+                      borderColor: "#fde68a",
                     }}
                   >
                     <p
                       style={{
                         margin: "0 0 8px 0",
-                        color: "#991b1b",
+                        color: "#b45309",
                         fontSize: "0.9rem",
                       }}
                     >
-                      ¿Confirmas eliminar el vehículo{" "}
-                      <strong>{autoAEliminar.marca_modelo}</strong> (
-                      {autoAEliminar.patente})?
+                      ¿Confirmas desvincular el vehículo{" "}
+                      <strong>{autoADesvincular.marca_modelo}</strong> (
+                      {autoADesvincular.patente})? El auto no se borrará del
+                      sistema.
                     </p>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
                         type="button"
-                        onClick={handleConfirmarEliminarAuto}
-                        style={styles.btnDanger}
+                        onClick={handleConfirmarDesvincularAuto}
+                        style={{
+                          ...styles.btnDanger,
+                          backgroundColor: "#d97706",
+                        }}
                       >
-                        Sí, eliminar
+                        Sí, desvincular
                       </button>
                       <button
                         type="button"
-                        onClick={() => setAutoAEliminar(null)}
+                        onClick={() => setAutoADesvincular(null)}
                         style={styles.btnSecondary}
                       >
                         Cancelar
