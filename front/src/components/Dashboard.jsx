@@ -9,6 +9,19 @@ const Dashboard = ({ onNavigate }) => {
   const [turnosDelDia, setTurnosDelDia] = useState([]);
   const [productosStockBajo, setProductosStockBajo] = useState([]);
 
+  // Estado para el sistema de alertas visuales (Toast)
+  const [toast, setToast] = useState({ mensaje: null, tipo: "success" });
+
+  // Efecto para ocultar el toast automáticamente después de 3 segundos
+  useEffect(() => {
+    if (toast.mensaje) {
+      const timer = setTimeout(() => {
+        setToast({ mensaje: null, tipo: "success" });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   // Cargar turnos de hoy con fecha local correcta y escasez de stock
   useEffect(() => {
     const cargarDatosDashboard = async () => {
@@ -113,6 +126,55 @@ const Dashboard = ({ onNavigate }) => {
         fontFamily: "system-ui, sans-serif",
       }}
     >
+      {/* NOTIFICACIÓN TOAST FLOTANTE (3 SEGUNDOS) */}
+      {toast.mensaje && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            zIndex: 9999,
+            background:
+              toast.tipo === "success"
+                ? "#f0fdf4"
+                : toast.tipo === "warning"
+                  ? "#fffbeb"
+                  : "#fef2f2",
+            border: `1px solid ${
+              toast.tipo === "success"
+                ? "#bbf7d0"
+                : toast.tipo === "warning"
+                  ? "#fde68a"
+                  : "#fecca7"
+            }`,
+            color:
+              toast.tipo === "success"
+                ? "#166534"
+                : toast.tipo === "warning"
+                  ? "#92400e"
+                  : "#991b1b",
+            padding: "12px 18px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "0.9rem",
+            fontWeight: "500",
+            animation: "fadeIn 0.3s ease-in-out",
+          }}
+        >
+          <span>
+            {toast.tipo === "success"
+              ? "💾"
+              : toast.tipo === "warning"
+                ? "⚠️"
+                : "❌"}
+          </span>
+          <span>{toast.mensaje}</span>
+        </div>
+      )}
+
       {/* BANNER FIJO Y DISCRETO DE STOCK BAJO */}
       {productosStockBajo.length > 0 && (
         <div
@@ -259,14 +321,22 @@ const Dashboard = ({ onNavigate }) => {
               );
               const data = await res.json();
               if (data.success) {
-                alert("💾 ¡Respaldo guardado exitosamente en el pendrive!");
+                setToast({
+                  mensaje: "¡Respaldo guardado exitosamente en el pendrive!",
+                  tipo: "success",
+                });
               } else {
-                alert("⚠️ " + data.error);
+                setToast({
+                  mensaje: data.error,
+                  tipo: "warning",
+                });
               }
             } catch {
-              alert(
-                "❌ No se pudo conectar con el servidor para hacer el respaldo.",
-              );
+              setToast({
+                mensaje:
+                  "No se pudo conectar con el servidor para hacer el respaldo.",
+                tipo: "error",
+              });
             }
           }}
           style={{
@@ -345,43 +415,46 @@ const Dashboard = ({ onNavigate }) => {
                 No hay turnos agendados para hoy.
               </p>
             ) : (
-              turnosDelDia.map((t) => {
-                const horaTurno = t.fecha_hora.split(" ")[1]?.slice(0, 5) || "";
-                return (
-                  <div
-                    key={t.id}
-                    style={{
-                      borderBottom: "1px solid #f1f5f9",
-                      paddingBottom: "6px",
-                      marginBottom: "6px",
-                    }}
-                  >
+              <div>
+                {turnosDelDia.map((t) => {
+                  const horaTurno =
+                    t.fecha_hora.split(" ")[1]?.slice(0, 5) || "";
+                  return (
                     <div
+                      key={t.id}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.82rem",
-                        fontWeight: "bold",
+                        borderBottom: "1px solid #f1f5f9",
+                        paddingBottom: "6px",
+                        marginBottom: "6px",
                       }}
                     >
-                      <span style={{ color: "#0284c7" }}>
-                        ⏰ {horaTurno} hs
-                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.82rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        <span style={{ color: "#0284c7" }}>
+                          ⏰ {horaTurno} hs
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "#334155",
+                          marginTop: "2px",
+                        }}
+                      >
+                        {t.cliente_nombre ||
+                          `Cliente ID: ${t.cliente_id || "Genérico"}`}{" "}
+                        - <em>{t.observaciones || "Sin observaciones"}</em>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: "0.78rem",
-                        color: "#334155",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {t.cliente_nombre ||
-                        `Cliente ID: ${t.cliente_id || "Genérico"}`}{" "}
-                      - <em>{t.observaciones || "Sin observaciones"}</em>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
           <div

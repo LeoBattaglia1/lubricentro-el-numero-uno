@@ -354,7 +354,6 @@ export default function Turnos() {
   const [menuServiciosEditAbierto, setMenuServiciosEditAbierto] =
     useState(null);
 
-  // Estado para el modal personalizado de eliminación
   const [turnoAEliminar, setTurnoAEliminar] = useState(null);
 
   // Formulario de alta
@@ -376,7 +375,6 @@ export default function Turnos() {
   const [editAutoId, setEditAutoId] = useState("");
   const [editVehiculoContacto, setEditVehiculoContacto] = useState("");
   const [editServiciosIds, setEditServiciosIds] = useState([]);
-  const [editObservaciones, setEditObservaciones] = useState("");
 
   const [mensajeNotificacion, setMensajeNotificacion] = useState("");
   const [mensajeError, setMensajeError] = useState("");
@@ -567,6 +565,7 @@ export default function Turnos() {
         setNuevoVehiculoContacto("");
         setNuevoServiciosIds([]);
         setNuevoObservaciones("");
+        setMenuServiciosNuevoAbierto(false);
         await recargarTurnos();
         mostrarExito("Turno agregado correctamente.");
       } else {
@@ -630,10 +629,10 @@ export default function Turnos() {
 
     const obsStr = item.observaciones || "";
     const serviciosEncontrados = servicios
-      .map((s) => s.nombre)
-      .filter((nombreServicio) => obsStr.includes(nombreServicio));
+      .filter((s) => obsStr.toLowerCase().includes(s.nombre.toLowerCase()))
+      .map((s) => s.nombre);
+
     setEditServiciosIds(serviciosEncontrados);
-    setEditObservaciones(obsStr);
     setMenuServiciosEditAbierto(null);
   };
 
@@ -665,12 +664,7 @@ export default function Turnos() {
     }
 
     const fechaHoraFinal = construirFechaHora(editFecha, editHora);
-    const observacionesFinal = [
-      ...editServiciosIds,
-      ...(editObservaciones && !editServiciosIds.includes(editObservaciones)
-        ? [editObservaciones]
-        : []),
-    ].join(", ");
+    const observacionesFinal = editServiciosIds.join(", ");
 
     try {
       const res = await fetch(`${ENDPOINT_TURNOS}/${id}`, {
@@ -1393,7 +1387,6 @@ export default function Turnos() {
         </div>
       )}
 
-      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
       {turnoAEliminar && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalCard}>

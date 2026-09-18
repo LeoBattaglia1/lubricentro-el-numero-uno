@@ -81,6 +81,18 @@ cron.schedule("45 11,20 * * *", async () => {
   }
 });
 
+// --- CONFIGURACIÓN PARA SERVIR EL FRONTEND COMPILADO ---
+const __dirname = path.resolve(); // Necesario si usas ES Modules (import/export)
+const rutaDist = path.join(__dirname, "../front/dist");
+
+app.use(express.static(rutaDist));
+
+// Cualquier ruta que no sea de la API (/api/...) devolverá el index.html de React
+app.get("*", (req, res) => {
+  res.sendFile(path.join(rutaDist, "index.html"));
+});
+// --------------------------------------------------------
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend completo corriendo en http://localhost:${PORT}`);
 });

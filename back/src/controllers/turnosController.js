@@ -1,10 +1,17 @@
 import db from "../config/db.js";
 
-// 1. Obtener todos los turnos
+// 1. Obtener todos los turnos (Con JOIN para traer siempre el nombre del cliente)
 export const obtenerTurnos = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM turnos");
-    console.log("📥 [obtenerTurnos] Datos leídos de la BD:", rows);
+    const [rows] = await db.query(`
+      SELECT turnos.*, clientes.nombre AS cliente_nombre 
+      FROM turnos 
+      LEFT JOIN clientes ON turnos.cliente_id = clientes.id
+    `);
+    console.log(
+      "📥 [obtenerTurnos] Datos leídos de la BD con nombres:",
+      rows.length,
+    );
     res.json(rows);
   } catch (error) {
     console.error("Error en obtenerTurnos:", error);
@@ -65,6 +72,16 @@ export const crearTurno = async (req, res) => {
 export const actualizarTurno = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // CORRECCIÓN: Faltaba desestructurar el body aquí
+    let {
+      fecha_hora,
+      cliente_id,
+      auto_id,
+      cliente_nombre,
+      vehiculo_contacto,
+      observaciones,
+    } = req.body;
 
     if (fecha_hora) {
       const limpio = fecha_hora.replace("Z", "").replace("T", " ");
